@@ -1141,8 +1141,8 @@ remove_whisper() {
   rm -rf "$WHISPER_CONF_DIR"
   rm -rf /opt/whisper
   # Remove the dedicated system user and group if they exist
-  id whisper >/dev/null 2>&1 && userdel whisper 2>/dev/null || true
-  getent group whisper >/dev/null 2>&1 && groupdel whisper 2>/dev/null || true
+  if id whisper >/dev/null 2>&1; then userdel whisper 2>/dev/null || true; fi
+  if getent group whisper >/dev/null 2>&1; then groupdel whisper 2>/dev/null || true; fi
   echo
   echo "Whisper has been removed."
   echo "Model cache at $WHISPER_DATA was preserved."
