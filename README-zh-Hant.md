@@ -16,7 +16,6 @@
 - 相容 OpenAI 的 `/v1/audio/transcriptions` API 介面 —— 一行更改即可切換任意應用程式
 - 串流轉錄 —— 透過 SSE 即時接收解碼片段，無需等待完整檔案
 - 多種輸出格式：`json`、`text`、`verbose_json`、`srt`、`vtt`
-- 可選 API 金鑰驗證
 - 離線/隔離網路模式 —— 使用預快取模型在無網路環境中執行（`WHISPER_LOCAL_ONLY`）
 - 音訊保留在你的伺服器上 —— 不向第三方傳送資料
 - 將 Whisper 安裝為具有專用系統使用者的 systemd 服務
@@ -100,8 +99,9 @@ curl -fL -o whisper.sh https://github.com/hwdsl2/whisper-install/raw/main/whispe
 安裝選項（選用）：
 
   --auto                               使用預設或自訂選項自動安裝
-  --model  <名稱>                      要使用的 Whisper 模型（預設：base）
-  --port   <數字>                      API 伺服器的 TCP 連接埠（預設：9000）
+  --model      <名稱>                  要使用的 Whisper 模型（預設：base）
+  --port       <數字>                  API 伺服器的 TCP 連接埠（預設：9000）
+  --listenaddr [地址]                  監聽位址（預設：0.0.0.0，使用 127.0.0.1 僅限本機存取）
 
 可用模型：tiny, tiny.en, base, base.en, small, small.en,
           medium, medium.en, large-v1, large-v2, large-v3,
@@ -368,6 +368,7 @@ sudo systemctl restart whisper
 |---|---|---|
 | `WHISPER_MODEL` | 要使用的 Whisper 模型。參見[模型表](#可用模型)了解選項。 | `base` |
 | `WHISPER_PORT` | API 伺服器的 TCP 連接埠（1–65535）。 | `9000` |
+| `WHISPER_LISTEN_ADDR` | API 伺服器的監聽位址。使用 `0.0.0.0` 監聽所有介面，或 `127.0.0.1` 僅限本機存取。 | `0.0.0.0` |
 | `WHISPER_LANGUAGE` | 預設轉錄語言。BCP-47 代碼（例如 `en`、`fr`、`zh`）或 `auto` 自動偵測。 | `auto` |
 | `WHISPER_DEVICE` | 運算裝置。 | `cpu` |
 | `WHISPER_COMPUTE_TYPE` | 量化類型。建議 CPU 使用 `int8`。 | `int8` |
@@ -434,7 +435,19 @@ server {
 
 ## 與其他 AI 服務配合使用
 
-[Whisper (STT)](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh-Hant.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh-Hant.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh-Hant.md) 和 [Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh-Hant.md) 專案可以組合使用，在你自己的伺服器上建構完整的私有 AI 技術堆疊 —— 從語音輸入/輸出到 RAG 智慧問答。
+[Whisper (STT)](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh-Hant.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh-Hant.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh-Hant.md) 和 [Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh-Hant.md) 專案可以組合使用，在你自己的伺服器上建構完整的私有 AI 技術堆疊 —— 從語音輸入/輸出到檢索增強生成（RAG）。Whisper、Kokoro 和 Embeddings 完全在本地端執行。當 LiteLLM 僅使用本地端模型（例如 Ollama）時，資料不會傳送給第三方。如果你將 LiteLLM 設定為使用外部提供商（例如 OpenAI、Anthropic），你的資料將被傳送至這些提供商處理。
+
+```mermaid
+graph LR
+    D["📄 文件"] -->|向量化| E["Embeddings<br/>(文字轉向量)"]
+    E -->|儲存| VDB["向量資料庫<br/>(Qdrant, Chroma)"]
+    A["🎤 語音輸入"] -->|轉錄| W["Whisper<br/>(語音轉文字)"]
+    W -->|查詢| E
+    VDB -->|上下文| L["LiteLLM<br/>(AI 閘道)"]
+    W -->|文字| L
+    L -->|回應| T["Kokoro TTS<br/>(文字轉語音)"]
+    T --> B["🔊 語音輸出"]
+```
 
 | 服務 | 角色 | 預設連接埠 |
 |---|---|---|
@@ -466,17 +479,44 @@ curl -s http://localhost:8880/v1/audio/speech \
   --output response.mp3
 ```
 
+### RAG 檢索增強生成範例
+
+對文件進行向量化以實現語意檢索，並將檢索到的上下文傳送給 LLM 進行問答：
+
+```bash
+# 第一步：對文件片段進行向量化並存入向量資料庫
+curl -s http://localhost:8000/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Docker simplifies deployment by packaging apps in containers.", "model": "text-embedding-ada-002"}' \
+  | jq '.data[0].embedding'
+# → 將返回的向量連同原文一起存入 Qdrant、Chroma、pgvector 等向量資料庫。
+
+# 第二步：查詢時，對問題進行向量化並從向量資料庫檢索最相關的文件片段，
+#          然後將問題和檢索到的上下文傳送給 LiteLLM 以取得 LLM 回應。
+curl -s http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer <your-litellm-key>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [
+      {"role": "system", "content": "請僅根據所提供的上下文進行回答。"},
+      {"role": "user", "content": "Docker 的作用是什麼？\n\n上下文：Docker 通過將應用打包為容器來簡化部署流程。"}
+    ]
+  }' \
+  | jq -r '.choices[0].message.content'
+```
+
 ## 使用自訂選項自動安裝
 
 ```bash
 sudo bash whisper.sh --auto --model base --port 9000
 ```
 
-使用 `--auto` 時，所有安裝選項均為選用。預設值：模型 `base`，連接埠 `9000`。
+使用 `--auto` 時，所有安裝選項均為選用。預設值：模型 `base`，連接埠 `9000`，監聽位址 `0.0.0.0`。
 
 ## 技術細節
 
-- 作業系統支援：Ubuntu 20.04+、Debian 11+、AlmaLinux/Rocky/CentOS 8+、RHEL 8+、Fedora
+- 作業系統支援：Ubuntu 22.04+、Debian 11+、AlmaLinux/Rocky/CentOS 9+、RHEL 9+、Fedora
 - 執行時：Python 3.9+（虛擬環境位於 `/opt/whisper/venv`）
 - STT 引擎：[faster-whisper](https://github.com/SYSTRAN/faster-whisper) with CTranslate2（預設 INT8）
 - API 框架：[FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)

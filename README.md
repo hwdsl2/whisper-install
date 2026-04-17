@@ -16,7 +16,6 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 - OpenAI-compatible `/v1/audio/transcriptions` API endpoint — switch any app with a one-line change
 - Streaming transcription — receive segments via SSE as they are decoded, with no waiting for the full file
 - Multiple output formats: `json`, `text`, `verbose_json`, `srt`, `vtt`
-- Optional API key authentication
 - Offline/air-gapped mode — run without internet access using pre-cached models (`WHISPER_LOCAL_ONLY`)
 - Audio stays on your server — no data sent to third parties
 - Installs Whisper as a systemd service with a dedicated system user
@@ -100,8 +99,9 @@ Options:
 Install options (optional):
 
   --auto                               auto install using default or custom options
-  --model  <name>                      Whisper model to use (default: base)
-  --port   <number>                    TCP port for the API server (default: 9000)
+  --model      <name>                  Whisper model to use (default: base)
+  --port       <number>                TCP port for the API server (default: 9000)
+  --listenaddr [address]               listen address (default: 0.0.0.0, use 127.0.0.1 for local only)
 
 Available models: tiny, tiny.en, base, base.en, small, small.en,
                   medium, medium.en, large-v1, large-v2, large-v3,
@@ -368,6 +368,7 @@ All variables are optional. If not set, defaults are used automatically.
 |---|---|---|
 | `WHISPER_MODEL` | Whisper model to use. See [model table](#available-models) for options. | `base` |
 | `WHISPER_PORT` | TCP port for the API server (1–65535). | `9000` |
+| `WHISPER_LISTEN_ADDR` | Listen address for the API server. Use `0.0.0.0` to listen on all interfaces, or `127.0.0.1` for local access only. | `0.0.0.0` |
 | `WHISPER_LANGUAGE` | Default transcription language. BCP-47 code (e.g. `en`, `fr`, `zh`) or `auto` to autodetect. | `auto` |
 | `WHISPER_DEVICE` | Compute device. | `cpu` |
 | `WHISPER_COMPUTE_TYPE` | Quantization type. `int8` is recommended for CPU. | `int8` |
@@ -434,7 +435,19 @@ Set `WHISPER_API_KEY` in `/etc/whisper/whisper.conf` when the server is accessib
 
 ## Using with other AI services
 
-The [Whisper (STT)](https://github.com/hwdsl2/docker-whisper), [Embeddings](https://github.com/hwdsl2/docker-embeddings), [LiteLLM](https://github.com/hwdsl2/docker-litellm), and [Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro) projects can be combined to build a complete, private AI stack on your own server — from voice I/O to RAG-powered question answering.
+The [Whisper (STT)](https://github.com/hwdsl2/docker-whisper), [Embeddings](https://github.com/hwdsl2/docker-embeddings), [LiteLLM](https://github.com/hwdsl2/docker-litellm), and [Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro) projects can be combined to build a complete, private AI stack on your own server — from voice I/O to RAG-powered question answering. Whisper, Kokoro, and Embeddings run fully locally. When using LiteLLM with local models only (e.g., Ollama), no data is sent to third parties. If you configure LiteLLM with external providers (e.g., OpenAI, Anthropic), your data will be sent to those providers.
+
+```mermaid
+graph LR
+    D["📄 Documents"] -->|embed| E["Embeddings<br/>(text → vectors)"]
+    E -->|store| VDB["Vector DB<br/>(Qdrant, Chroma)"]
+    A["🎤 Audio input"] -->|transcribe| W["Whisper<br/>(speech-to-text)"]
+    W -->|query| E
+    VDB -->|context| L["LiteLLM<br/>(AI gateway)"]
+    W -->|text| L
+    L -->|response| T["Kokoro TTS<br/>(text-to-speech)"]
+    T --> B["🔊 Audio output"]
+```
 
 | Service | Role | Default port |
 |---|---|---|
@@ -466,17 +479,44 @@ curl -s http://localhost:8880/v1/audio/speech \
   --output response.mp3
 ```
 
+### RAG pipeline example
+
+Embed documents for semantic search, then retrieve context and answer questions with an LLM:
+
+```bash
+# Step 1: Embed a document chunk and store the vector in your vector DB
+curl -s http://localhost:8000/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Docker simplifies deployment by packaging apps in containers.", "model": "text-embedding-ada-002"}' \
+  | jq '.data[0].embedding'
+# → Store the returned vector alongside the source text in Qdrant, Chroma, pgvector, etc.
+
+# Step 2: At query time, embed the question, retrieve the top matching chunks from
+#          the vector DB, then send the question and retrieved context to LiteLLM.
+curl -s http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer <your-litellm-key>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [
+      {"role": "system", "content": "Answer using only the provided context."},
+      {"role": "user", "content": "What does Docker do?\n\nContext: Docker simplifies deployment by packaging apps in containers."}
+    ]
+  }' \
+  | jq -r '.choices[0].message.content'
+```
+
 ## Auto install using custom options
 
 ```bash
 sudo bash whisper.sh --auto --model base --port 9000
 ```
 
-All install options are optional when using `--auto`. Defaults: model `base`, port `9000`.
+All install options are optional when using `--auto`. Defaults: model `base`, port `9000`, listen address `0.0.0.0`.
 
 ## Technical details
 
-- OS support: Ubuntu 20.04+, Debian 11+, AlmaLinux/Rocky/CentOS 8+, RHEL 8+, Fedora
+- OS support: Ubuntu 22.04+, Debian 11+, AlmaLinux/Rocky/CentOS 9+, RHEL 9+, Fedora
 - Runtime: Python 3.9+ (virtual environment at `/opt/whisper/venv`)
 - STT engine: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) with CTranslate2 (INT8 by default)
 - API framework: [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)

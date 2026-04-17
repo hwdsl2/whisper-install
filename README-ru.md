@@ -16,7 +16,6 @@
 - Совместимая с OpenAI конечная точка `/v1/audio/transcriptions` — переключите любое приложение одной строкой
 - Потоковая транскрипция — получайте сегменты через SSE по мере декодирования, не дожидаясь полного файла
 - Несколько форматов вывода: `json`, `text`, `verbose_json`, `srt`, `vtt`
-- Опциональная аутентификация по API-ключу
 - Офлайн/изолированный режим — работа без доступа к интернету с предварительно загруженными моделями (`WHISPER_LOCAL_ONLY`)
 - Аудио остаётся на вашем сервере — данные не передаются третьим сторонам
 - Установка Whisper как службы systemd с выделенным системным пользователем
@@ -100,8 +99,9 @@ curl -fL -o whisper.sh https://github.com/hwdsl2/whisper-install/raw/main/whispe
 Параметры установки (необязательные):
 
   --auto                               автоматически установить с параметрами по умолчанию или пользовательскими
-  --model  <название>                  модель Whisper для использования (по умолчанию: base)
-  --port   <число>                     TCP-порт для API-сервера (по умолчанию: 9000)
+  --model      <название>              модель Whisper для использования (по умолчанию: base)
+  --port       <число>                 TCP-порт для API-сервера (по умолчанию: 9000)
+  --listenaddr [адрес]                 адрес прослушивания (по умолчанию: 0.0.0.0, используйте 127.0.0.1 только для локального доступа)
 
 Доступные модели: tiny, tiny.en, base, base.en, small, small.en,
                   medium, medium.en, large-v1, large-v2, large-v3,
@@ -368,6 +368,7 @@ sudo systemctl restart whisper
 |---|---|---|
 | `WHISPER_MODEL` | Модель Whisper для использования. Варианты см. в [таблице моделей](#доступные-модели). | `base` |
 | `WHISPER_PORT` | TCP-порт для API-сервера (1–65535). | `9000` |
+| `WHISPER_LISTEN_ADDR` | Адрес прослушивания API-сервера. Используйте `0.0.0.0` для всех интерфейсов или `127.0.0.1` только для локального доступа. | `0.0.0.0` |
 | `WHISPER_LANGUAGE` | Язык транскрипции по умолчанию. BCP-47 код (например, `en`, `fr`, `ru`) или `auto` для автоопределения. | `auto` |
 | `WHISPER_DEVICE` | Вычислительное устройство. | `cpu` |
 | `WHISPER_COMPUTE_TYPE` | Тип квантизации. Для CPU рекомендуется `int8`. | `int8` |
@@ -434,7 +435,19 @@ server {
 
 ## Использование с другими AI-сервисами
 
-Проекты [Whisper (STT)](https://github.com/hwdsl2/docker-whisper/blob/main/README-ru.md), [Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-ru.md), [LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-ru.md) и [Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-ru.md) можно объединить для построения полного приватного AI-стека на вашем собственном сервере — от голосового ввода/вывода до RAG-интеллектуальных ответов.
+Проекты [Whisper (STT)](https://github.com/hwdsl2/docker-whisper/blob/main/README-ru.md), [Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-ru.md), [LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-ru.md) и [Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-ru.md) можно объединить для построения полного приватного AI-стека на вашем собственном сервере — от голосового ввода/вывода до RAG-поиска с ответами. Whisper, Kokoro и Embeddings работают полностью локально. При использовании LiteLLM только с локальными моделями (например, Ollama) данные не передаются третьим сторонам. Если вы настроите LiteLLM с внешними провайдерами (например, OpenAI, Anthropic), ваши данные будут переданы этим провайдерам для обработки.
+
+```mermaid
+graph LR
+    D["📄 Документы"] -->|эмбеддинг| E["Embeddings<br/>(текст → векторы)"]
+    E -->|сохранить| VDB["Векторная БД<br/>(Qdrant, Chroma)"]
+    A["🎤 Голосовой ввод"] -->|транскрипция| W["Whisper<br/>(речь в текст)"]
+    W -->|запрос| E
+    VDB -->|контекст| L["LiteLLM<br/>(AI-шлюз)"]
+    W -->|текст| L
+    L -->|ответ| T["Kokoro TTS<br/>(текст в речь)"]
+    T --> B["🔊 Аудиовыход"]
+```
 
 | Сервис | Роль | Порт по умолчанию |
 |---|---|---|
@@ -466,17 +479,44 @@ curl -s http://localhost:8880/v1/audio/speech \
   --output response.mp3
 ```
 
+### Пример: конвейер RAG
+
+Индексируйте документы для семантического поиска, затем извлекайте контекст и отвечайте на вопросы с помощью LLM:
+
+```bash
+# Шаг 1: Получить вектор фрагмента документа и сохранить его в векторной БД
+curl -s http://localhost:8000/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Docker simplifies deployment by packaging apps in containers.", "model": "text-embedding-ada-002"}' \
+  | jq '.data[0].embedding'
+# → Сохраните возвращённый вектор вместе с исходным текстом в Qdrant, Chroma, pgvector и т.д.
+
+# Шаг 2: При запросе — получить вектор вопроса, найти подходящие фрагменты
+#          в векторной БД, затем передать вопрос и контекст в LiteLLM.
+curl -s http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer <your-litellm-key>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4o",
+    "messages": [
+      {"role": "system", "content": "Отвечай только на основе предоставленного контекста."},
+      {"role": "user", "content": "Что делает Docker?\n\nКонтекст: Docker упрощает развёртывание, упаковывая приложения в контейнеры."}
+    ]
+  }' \
+  | jq -r '.choices[0].message.content'
+```
+
 ## Автоматическая установка с пользовательскими параметрами
 
 ```bash
 sudo bash whisper.sh --auto --model base --port 9000
 ```
 
-При использовании `--auto` все параметры установки необязательны. Значения по умолчанию: модель `base`, порт `9000`.
+При использовании `--auto` все параметры установки необязательны. Значения по умолчанию: модель `base`, порт `9000`, адрес прослушивания `0.0.0.0`.
 
 ## Технические детали
 
-- Поддержка ОС: Ubuntu 20.04+, Debian 11+, AlmaLinux/Rocky/CentOS 8+, RHEL 8+, Fedora
+- Поддержка ОС: Ubuntu 22.04+, Debian 11+, AlmaLinux/Rocky/CentOS 9+, RHEL 9+, Fedora
 - Среда выполнения: Python 3.9+ (виртуальное окружение в `/opt/whisper/venv`)
 - STT-движок: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) с CTranslate2 (INT8 по умолчанию)
 - API-фреймворк: [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)
