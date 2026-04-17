@@ -88,17 +88,17 @@ Supported distros are Ubuntu, Debian, AlmaLinux, Rocky Linux, CentOS, RHEL and F
 }
 
 check_os_ver() {
-  if [[ "$os" == "ubuntu" && "$os_version" -lt 2004 ]]; then
-    exiterr "Ubuntu 20.04 or higher is required to use this installer."
+  if [[ "$os" == "ubuntu" && "$os_version" -lt 2204 ]]; then
+    exiterr "Ubuntu 22.04 or higher is required to use this installer."
   fi
   if [[ "$os" == "debian" && "$os_version" -lt 11 ]]; then
     exiterr "Debian 11 or higher is required to use this installer."
   fi
-  if [[ "$os" == "centos" && "$os_version" -lt 8 ]]; then
-    exiterr "CentOS 8 or higher is required to use this installer."
+  if [[ "$os" == "centos" && "$os_version" -lt 9 ]]; then
+    exiterr "CentOS 9 or higher is required to use this installer."
   fi
-  if [[ "$os" == "rhel" && "$os_version" -lt 8 ]]; then
-    exiterr "RHEL 8 or higher is required to use this installer."
+  if [[ "$os" == "rhel" && "$os_version" -lt 9 ]]; then
+    exiterr "RHEL 9 or higher is required to use this installer."
   fi
 }
 
@@ -140,6 +140,11 @@ parse_args() {
     --port)
       [ -z "${2:-}" ] && show_usage "Missing value for --port."
       port_arg="$2"
+      shift; shift
+      ;;
+    --listenaddr)
+      [ -z "${2:-}" ] && show_usage "Missing value for --listenaddr."
+      listen_addr_arg="$2"
       shift; shift
       ;;
     --showinfo)
@@ -199,11 +204,21 @@ check_args() {
   if [ "$download_model" = 1 ] && [ -z "$model_to_download" ]; then
     exiterr "Missing model name. Usage: --downloadmodel <model>"
   fi
+  if [ -n "$model_arg" ] || [ -n "$port_arg" ] || [ -n "$listen_addr_arg" ]; then
+    if [ -f "$WHISPER_CONF" ]; then
+      show_usage "Invalid parameters. Whisper is already set up on this server."
+    elif [ "$auto" = 0 ]; then
+      show_usage "Invalid parameters. You must specify '--auto' when using these parameters."
+    fi
+  fi
   if [ -n "$model_arg" ]; then
     validate_model_name "$model_arg" || exiterr "Invalid model '$model_arg'. Run '--listmodels' to see valid names."
   fi
   if [ -n "$port_arg" ] && ! check_port "$port_arg"; then
     exiterr "Invalid port. Must be an integer between 1 and 65535."
+  fi
+  if [ -n "$listen_addr_arg" ] && ! check_ip "$listen_addr_arg"; then
+    exiterr "Invalid listen address '$listen_addr_arg'. Must be a valid IPv4 address (e.g. 127.0.0.1 or 0.0.0.0)."
   fi
   if [ "$download_model" = 1 ]; then
     validate_model_name "$model_to_download" || exiterr "Unknown model '$model_to_download'. Run '--listmodels' to see valid names."
@@ -264,8 +279,9 @@ Options:
 Install options (optional):
 
   --auto                               auto install using default or custom options
-  --model  <name>                      Whisper model to use (default: base)
-  --port   <number>                    TCP port for the API server (default: 9000)
+  --model      <name>                  Whisper model to use (default: base)
+  --port       <number>                TCP port for the API server (default: 9000)
+  --listenaddr [address]               listen address (default: 0.0.0.0, use 127.0.0.1 for local only)
 
 Available models: tiny, tiny.en, base, base.en, small, small.en,
                   medium, medium.en, large-v1, large-v2, large-v3,
@@ -305,7 +321,7 @@ show_welcome() {
   else
     show_header
     op_text=default
-    if [ -n "$model_arg" ] || [ -n "$port_arg" ]; then
+    if [ -n "$model_arg" ] || [ -n "$port_arg" ] || [ -n "$listen_addr_arg" ]; then
       op_text=custom
     fi
     echo
@@ -351,8 +367,9 @@ select_port() {
 show_config() {
   if [ "$auto" != 0 ]; then
     echo
-    echo "Model:  $whisper_model"
-    echo "Port:   TCP/$whisper_port"
+    echo "Model:        $whisper_model"
+    echo "Listen addr:  $whisper_listen_addr"
+    echo "Port:         TCP/$whisper_port"
   fi
 }
 
@@ -856,9 +873,10 @@ async def transcribe(
 
 if __name__ == "__main__":
     port = int(os.environ.get("WHISPER_PORT", "9000"))
+    host = os.environ.get("WHISPER_LISTEN_ADDR", "0.0.0.0").strip()
     uvicorn.run(
         "api_server:app",
-        host="0.0.0.0",
+        host=host,
         port=port,
         log_level=_log_level_str.lower(),
         workers=1,
@@ -883,6 +901,10 @@ WHISPER_MODEL=${whisper_model}
 
 # TCP port for the API server (1-65535)
 WHISPER_PORT=${whisper_port}
+
+# Listen address for the API server.
+# Use 0.0.0.0 to listen on all interfaces, or 127.0.0.1 for local access only.
+WHISPER_LISTEN_ADDR=${whisper_listen_addr}
 
 # Default language for transcription.
 # Set to a BCP-47 code (e.g. en, fr, de) to skip auto-detection.
@@ -1202,6 +1224,7 @@ remove_whisper=0
 assume_yes=0
 model_arg=""
 port_arg=""
+listen_addr_arg=""
 model_to_download=""
 
 check_shell
@@ -1242,6 +1265,7 @@ fi
 show_welcome
 select_model
 select_port
+[ -n "$listen_addr_arg" ] && whisper_listen_addr="$listen_addr_arg" || whisper_listen_addr="0.0.0.0"
 show_config
 show_setup_ready
 confirm_setup
