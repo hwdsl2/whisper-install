@@ -31,6 +31,7 @@ jobs:
           sudo test -d /opt/whisper/venv
           sudo grep -q 'WHISPER_MODEL=base' /etc/whisper/whisper.conf
           sudo grep -q 'WHISPER_PORT=9000' /etc/whisper/whisper.conf
+          sudo grep -q 'WHISPER_LISTEN_ADDR=0.0.0.0' /etc/whisper/whisper.conf
 
           sudo bash whisper.sh --showinfo
           sudo bash whisper.sh --listmodels
@@ -49,6 +50,16 @@ jobs:
           sudo systemctl status whisper.service
           sudo grep -q 'WHISPER_MODEL=tiny' /etc/whisper/whisper.conf
           sudo grep -q 'WHISPER_PORT=9001' /etc/whisper/whisper.conf
+
+          sudo bash whisper.sh --uninstall --yes
+
+          sudo test -f /etc/whisper/whisper.conf && exit 1
+
+          # Test --listenaddr option
+          sudo bash whisper.sh --auto --listenaddr 127.0.0.1
+
+          sudo systemctl status whisper.service
+          sudo grep -q 'WHISPER_LISTEN_ADDR=127.0.0.1' /etc/whisper/whisper.conf
 
           sudo bash whisper.sh --uninstall --yes
 

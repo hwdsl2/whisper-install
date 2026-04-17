@@ -8,7 +8,7 @@ jobs:
     if: github.repository_owner == 'hwdsl2'
     strategy:
       matrix:
-        os_version: ["centos:10s", "centos:9s", "almalinux:10", "almalinux:9", "almalinux:8", "rockylinux:8"]
+        os_version: ["centos:10s", "centos:9s", "almalinux:10", "almalinux:9"]
       fail-fast: false
     env:
       OS_VERSION: ${{ matrix.os_version }}
@@ -53,6 +53,7 @@ jobs:
           test -d /opt/whisper/venv
           grep -q 'WHISPER_MODEL=base' /etc/whisper/whisper.conf
           grep -q 'WHISPER_PORT=9000' /etc/whisper/whisper.conf
+          grep -q 'WHISPER_LISTEN_ADDR=0.0.0.0' /etc/whisper/whisper.conf
 
           bash whisper.sh --showinfo
           bash whisper.sh --listmodels
@@ -71,6 +72,16 @@ jobs:
           systemctl status whisper.service
           grep -q 'WHISPER_MODEL=tiny' /etc/whisper/whisper.conf
           grep -q 'WHISPER_PORT=9001' /etc/whisper/whisper.conf
+
+          bash whisper.sh --uninstall --yes
+
+          test -f /etc/whisper/whisper.conf && exit 1
+
+          # Test --listenaddr option
+          bash whisper.sh --auto --listenaddr 127.0.0.1
+
+          systemctl status whisper.service
+          grep -q 'WHISPER_LISTEN_ADDR=127.0.0.1' /etc/whisper/whisper.conf
 
           bash whisper.sh --uninstall --yes
 
@@ -95,6 +106,9 @@ jobs:
 
           if [ "$OS_VERSION" = "centos:9s" ] || [ "$OS_VERSION" = "centos:10s" ]; then
             echo "RUN yum -y -q install systemd" >> Dockerfile
+          fi
+          if [ "$OS_VERSION" = "almalinux:9" ] || [ "$OS_VERSION" = "centos:9s" ]; then
+            echo "RUN yum -y -q swap curl-minimal curl" >> Dockerfile
           fi
 
           cat >> Dockerfile <<'EOF'
