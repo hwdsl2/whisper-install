@@ -520,6 +520,7 @@ All install options are optional when using `--auto`. Defaults: model `base`, po
 - Runtime: Python 3.9+ (virtual environment at `/opt/whisper/venv`)
 - STT engine: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) with CTranslate2 (INT8 by default)
 - API framework: [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)
+- API server: [`api_server.py`](api_server.py) (installed to `/opt/whisper/api_server.py`)
 - Audio decoding: [PyAV](https://github.com/PyAV-Org/PyAV) (bundled FFmpeg libraries — no system `ffmpeg` required)
 - Data directory: `/var/lib/whisper` (model cache, persistent across upgrades)
 - Config file: `/etc/whisper/whisper.conf`

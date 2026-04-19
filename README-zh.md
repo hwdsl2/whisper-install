@@ -520,6 +520,7 @@ sudo bash whisper.sh --auto --model base --port 9000
 - 运行时：Python 3.9+（虚拟环境位于 `/opt/whisper/venv`）
 - STT 引擎：[faster-whisper](https://github.com/SYSTRAN/faster-whisper) with CTranslate2（默认 INT8）
 - API 框架：[FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)
+- API 服务器：[`api_server.py`](api_server.py)（安装到 `/opt/whisper/api_server.py`）
 - 音频解码：[PyAV](https://github.com/PyAV-Org/PyAV)（内置 FFmpeg 库 —— 无需系统安装 `ffmpeg`）
 - 数据目录：`/var/lib/whisper`（模型缓存，升级后保留）
 - 配置文件：`/etc/whisper/whisper.conf`

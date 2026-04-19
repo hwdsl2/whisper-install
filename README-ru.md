@@ -520,6 +520,7 @@ sudo bash whisper.sh --auto --model base --port 9000
 - Среда выполнения: Python 3.9+ (виртуальное окружение в `/opt/whisper/venv`)
 - STT-движок: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) с CTranslate2 (INT8 по умолчанию)
 - API-фреймворк: [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)
+- API-сервер: [`api_server.py`](api_server.py) (устанавливается в `/opt/whisper/api_server.py`)
 - Декодирование аудио: [PyAV](https://github.com/PyAV-Org/PyAV) (встроенные библиотеки FFmpeg — системный `ffmpeg` не требуется)
 - Каталог данных: `/var/lib/whisper` (кэш моделей, сохраняется при обновлениях)
 - Файл конфигурации: `/etc/whisper/whisper.conf`
