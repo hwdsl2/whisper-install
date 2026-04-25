@@ -216,7 +216,8 @@ data: {"type":"done","text":"Hello, how are you? I'm doing well, thank you."}
 
 Первый сегмент обычно приходит в течение 1–3 секунд после загрузки. Каждое событие `segment` включает временные метки `start`/`end` в секундах. Финальное событие `done` содержит полный собранный транскрипт, эквивалентный стандартному ответу `json`.
 
-**Пример — потоковая передача из браузера с помощью `fetch`:**
+<details>
+<summary><strong>Пример — потоковая передача из браузера с помощью <code>fetch</code></strong></summary>
 
 ```javascript
 const form = new FormData();
@@ -247,6 +248,8 @@ while (true) {
   }
 }
 ```
+
+</details>
 
 **Пример — получение субтитров SRT:**
 
@@ -456,7 +459,8 @@ graph LR
 | **[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-ru.md)** | AI-шлюз — маршрутизирует запросы к OpenAI, Anthropic, Ollama и 100+ другим провайдерам | `4000` |
 | **[Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-ru.md)** | Преобразует текст в естественную речь | `8880` |
 
-### Пример голосового конвейера
+<details>
+<summary><strong>Пример голосового конвейера</strong></summary>
 
 Транскрибируйте речевой вопрос, получите ответ LLM и преобразуйте его в речь:
 
@@ -479,7 +483,10 @@ curl -s http://localhost:8880/v1/audio/speech \
   --output response.mp3
 ```
 
-### Пример: конвейер RAG
+</details>
+
+<details>
+<summary><strong>Пример: конвейер RAG</strong></summary>
 
 Индексируйте документы для семантического поиска, затем извлекайте контекст и отвечайте на вопросы с помощью LLM:
 
@@ -505,6 +512,8 @@ curl -s http://localhost:4000/v1/chat/completions \
   }' \
   | jq -r '.choices[0].message.content'
 ```
+
+</details>
 
 ## Автоматическая установка с пользовательскими параметрами
 

@@ -216,7 +216,8 @@ data: {"type":"done","text":"Hello, how are you? I'm doing well, thank you."}
 
 第一個片段通常在上傳後 1–3 秒內到達。每個 `segment` 事件包含以秒為單位的 `start`/`end` 時間戳記。最終的 `done` 事件包含完整的轉錄文字，等同於標準的 `json` 回應。
 
-**範例 —— 在瀏覽器中使用 `fetch` 進行串流傳輸：**
+<details>
+<summary><strong>範例 —— 在瀏覽器中使用 <code>fetch</code> 進行串流傳輸</strong></summary>
 
 ```javascript
 const form = new FormData();
@@ -247,6 +248,8 @@ while (true) {
   }
 }
 ```
+
+</details>
 
 **範例 —— 取得 SRT 字幕：**
 
@@ -456,7 +459,8 @@ graph LR
 | **[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh-Hant.md)** | AI 閘道 —— 將請求路由至 OpenAI、Anthropic、Ollama 及 100+ 其他提供商 | `4000` |
 | **[Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh-Hant.md)** | 將文字轉換為自然語音 | `8880` |
 
-### 語音管道範例
+<details>
+<summary><strong>語音管道範例</strong></summary>
 
 將語音問題轉錄為文字，取得 LLM 回覆，並將其轉換為語音：
 
@@ -479,7 +483,10 @@ curl -s http://localhost:8880/v1/audio/speech \
   --output response.mp3
 ```
 
-### RAG 檢索增強生成範例
+</details>
+
+<details>
+<summary><strong>RAG 檢索增強生成範例</strong></summary>
 
 對文件進行向量化以實現語意檢索，並將檢索到的上下文傳送給 LLM 進行問答：
 
@@ -505,6 +512,8 @@ curl -s http://localhost:4000/v1/chat/completions \
   }' \
   | jq -r '.choices[0].message.content'
 ```
+
+</details>
 
 ## 使用自訂選項自動安裝
 
