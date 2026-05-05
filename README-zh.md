@@ -26,7 +26,7 @@
 - Docker AI/音频：[Whisper (STT)](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh.md)、[Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh.md)、[Ollama (LLM)](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh.md)
 - Docker VPN：[WireGuard](https://github.com/hwdsl2/docker-wireguard/blob/main/README-zh.md)、[OpenVPN](https://github.com/hwdsl2/docker-openvpn/blob/main/README-zh.md)、[IPsec VPN](https://github.com/hwdsl2/docker-ipsec-vpn-server/blob/master/README-zh.md)、[Headscale](https://github.com/hwdsl2/docker-headscale/blob/main/README-zh.md)
 
-**提示：** Whisper、Kokoro、Embeddings、LiteLLM 和 Ollama 可以[结合使用](#与其他-ai-服务配合使用)，在你自己的服务器上构建完整的私有 AI 技术栈。
+**提示：** Whisper、Kokoro、Embeddings、LiteLLM、Ollama 和 MCP 网关可以[配合使用](#与其他-ai-服务配合使用)，在您自己的服务器上搭建完整的自托管 AI 系统。参见 [Docker AI Stack](https://github.com/hwdsl2/docker-ai-stack)，获取现成的配置和流水线示例。
 
 ## 系统要求
 
@@ -438,84 +438,18 @@ server {
 
 ## 与其他 AI 服务配合使用
 
-[Whisper (STT)](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh.md)、[Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh.md) 和 [Ollama (LLM)](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh.md) 项目可以组合使用，在你自己的服务器上构建完整的私有 AI 技术栈 —— 从语音输入/输出到检索增强生成（RAG）。Whisper、Kokoro 和 Embeddings 完全在本地运行。Ollama 在本地运行所有 LLM 推理，无需向第三方发送数据。如果你将 LiteLLM 配置为使用外部提供商（例如 OpenAI、Anthropic），你的数据将被发送至这些提供商处理。
+[Whisper (STT)](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh.md)、[Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh.md)、[Ollama (LLM)](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh.md) 和 [MCP 网关](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-zh.md) 镜像可以组合使用，在您自己的服务器上搭建完整的自托管 AI 系统——从语音输入/输出到检索增强生成（RAG）。Whisper、Kokoro 和 Embeddings 完全在本地运行。Ollama 在本地运行所有 LLM 推理，无需向第三方发送数据。如果您将 LiteLLM 配置为使用外部提供商（例如 OpenAI、Anthropic），您的数据将被发送至这些提供商处理。
 
-```mermaid
-graph LR
-    D["📄 文档"] -->|向量化| E["Embeddings<br/>(文本转向量)"]
-    E -->|存储| VDB["向量数据库<br/>(Qdrant, Chroma)"]
-    A["🎤 语音输入"] -->|转录| W["Whisper<br/>(语音转文本)"]
-    W -->|查询| E
-    VDB -->|上下文| L["LiteLLM<br/>(AI 网关)"]
-    W -->|文本| L
-    L -->|路由到| O["Ollama<br/>(本地 LLM)"]
-    L -->|响应| T["Kokoro TTS<br/>(文本转语音)"]
-    T --> B["🔊 语音输出"]
-```
-
-| 服务 | 角色 | 默认端口 |
+| 服务 | 功能 | 默认端口 |
 |---|---|---|
+| **[Whisper (STT)](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh.md)** | 通过 REST API 转录完整音频文件 | `9000` |
 | **[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh.md)** | 将文本转换为向量，用于语义搜索和 RAG | `8000` |
-| **[Whisper (STT)](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh.md)** | 将语音音频转录为文字 | `9000` |
-| **[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh.md)** | AI 网关 —— 将请求路由至 OpenAI、Anthropic、Ollama 及 100+ 其他提供商 | `4000` |
-| **[Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh.md)** | 将文字转换为自然语音 | `8880` |
+| **[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh.md)** | AI 网关——将请求路由至 OpenAI、Anthropic、Ollama 及 100+ 其他提供商 | `4000` |
+| **[Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh.md)** | 将文本转换为自然语音 | `8880` |
 | **[Ollama (LLM)](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh.md)** | 运行本地 LLM 模型（llama3、qwen、mistral 等） | `11434` |
+| **[MCP 网关](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-zh.md)** | 将 AI 服务作为 MCP 工具暴露给 AI 助手（Claude、Cursor 等） | `3000` |
 
-<details>
-<summary><strong>语音管道示例</strong></summary>
-
-将语音问题转录为文字，获取 LLM 回复，并将其转换为语音：
-
-```bash
-# 第一步：将音频转录为文字（Whisper）
-TEXT=$(curl -s http://localhost:9000/v1/audio/transcriptions \
-  -F file=@question.mp3 -F model=whisper-1 | jq -r .text)
-
-# 第二步：将文字发送给 LLM 并获取回复（LiteLLM）
-RESPONSE=$(curl -s http://localhost:4000/v1/chat/completions \
-  -H "Authorization: Bearer <your-litellm-key>" \
-  -H "Content-Type: application/json" \
-  -d "{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"$TEXT\"}]}" \
-  | jq -r '.choices[0].message.content')
-
-# 第三步：将回复转换为语音（Kokoro TTS）
-curl -s http://localhost:8880/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d "{\"model\":\"tts-1\",\"input\":\"$RESPONSE\",\"voice\":\"af_heart\"}" \
-  --output response.mp3
-```
-
-</details>
-
-<details>
-<summary><strong>RAG 检索增强生成示例</strong></summary>
-
-对文档进行向量化以实现语义检索，并将检索到的上下文发送给 LLM 进行问答：
-
-```bash
-# 第一步：对文档片段进行向量化并存入向量数据库
-curl -s http://localhost:8000/v1/embeddings \
-  -H "Content-Type: application/json" \
-  -d '{"input": "Docker simplifies deployment by packaging apps in containers.", "model": "text-embedding-ada-002"}' \
-  | jq '.data[0].embedding'
-# → 将返回的向量连同原文一起存入 Qdrant、Chroma、pgvector 等向量数据库。
-
-# 第二步：查询时，对问题进行向量化并从向量数据库检索最相关的文档片段，
-#          然后将问题和检索到的上下文发送给 LiteLLM 以获取 LLM 回答。
-curl -s http://localhost:4000/v1/chat/completions \
-  -H "Authorization: Bearer <your-litellm-key>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-4o",
-    "messages": [
-      {"role": "system", "content": "请仅根据所提供的上下文进行回答。"},
-      {"role": "user", "content": "Docker 的作用是什么？\n\n上下文：Docker 通过将应用打包为容器来简化部署流程。"}
-    ]
-  }' \
-  | jq -r '.choices[0].message.content'
-```
-
-</details>
+**另请参阅：[Docker AI Stack](https://github.com/hwdsl2/docker-ai-stack)** — 提供现成的 docker-compose 配置和流水线示例。了解更多关于完整 AI 技术栈的部署方法。
 
 ## 使用自定义选项自动安装
 
