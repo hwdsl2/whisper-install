@@ -38,6 +38,63 @@ jobs:
           sudo bash whisper.sh --listmodels | grep -q 'base'
           sudo bash whisper.sh --listmodels | grep -q 'large-v3-turbo'
 
+          # Wait for server to be ready (up to 300 seconds for model download)
+          i=0
+          while [ "$i" -lt 300 ]; do
+            if curl -sf http://127.0.0.1:9000/health >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+            i=$((i + 1))
+          done
+
+          # Verify health endpoint
+          curl -sf http://127.0.0.1:9000/health
+
+          # Verify models endpoint
+          curl -sf http://127.0.0.1:9000/v1/models | grep -q '"object"'
+
+          # Generate a minimal test audio file
+          if [ ! -x /usr/bin/ffmpeg ]; then
+            export DEBIAN_FRONTEND=noninteractive
+            sudo apt-get -yqq update
+            sudo apt-get -yqq install ffmpeg
+          fi
+          ffmpeg -y -f lavfi -i "sine=frequency=440:duration=1" -ar 16000 -ac 1 /tmp/test.wav
+
+          # Test transcription endpoint (json format)
+          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+            -F file=@/tmp/test.wav -F model=whisper-1 \
+            | grep -q '"text"'
+
+          # Test transcription endpoint (text format)
+          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F response_format=text
+
+          # Test transcription endpoint (verbose_json format)
+          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F response_format=verbose_json \
+            | grep -q '"segments"'
+
+          # Test transcription endpoint (srt format)
+          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F response_format=srt
+
+          # Test transcription endpoint (vtt format)
+          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F response_format=vtt
+
+          # Test transcription endpoint with explicit language
+          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F language=en \
+            | grep -q '"text"'
+
+          # Test streaming transcription endpoint (stream=true, SSE)
+          stream_output=$(curl -sN http://127.0.0.1:9000/v1/audio/transcriptions \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F stream=true)
+          echo "$stream_output" | grep -q '"transcript.text.done"'
+          echo "$stream_output" | grep -q '\[DONE\]'
+
           sudo bash whisper.sh --uninstall --yes
 
           sudo test -f /etc/systemd/system/whisper.service && exit 1
