@@ -204,17 +204,19 @@ curl http://<server-ip>:9000/v1/audio/transcriptions \
   -F stream=true
 ```
 
-**SSE response** (one event per segment, then a final `done` event):
+**SSE response** (uses the [OpenAI streaming transcription protocol](https://platform.openai.com/docs/guides/speech-to-text#streaming-transcriptions)):
 
 ```
-data: {"type":"segment","start":0.0,"end":2.4,"text":"Hello, how are you?"}
+data: {"type":"transcript.text.delta","delta":"Hello, how are you?"}
 
-data: {"type":"segment","start":2.8,"end":5.1,"text":"I'm doing well, thank you."}
+data: {"type":"transcript.text.delta","delta":" I'm doing well, thank you."}
 
-data: {"type":"done","text":"Hello, how are you? I'm doing well, thank you."}
+data: {"type":"transcript.text.done","text":"Hello, how are you? I'm doing well, thank you."}
+
+data: [DONE]
 ```
 
-The first segment typically arrives within 1–3 seconds of upload. Each `segment` event includes `start`/`end` timestamps in seconds. The final `done` event contains the full assembled transcript, equivalent to the standard `json` response.
+The first delta typically arrives within 1–3 seconds of upload. Each `transcript.text.delta` event contains the incremental text for the segment just decoded. The final `transcript.text.done` event contains the full assembled transcript, equivalent to the standard `json` response.
 
 <details>
 <summary><strong>Example — stream from a browser using <code>fetch</code></strong></summary>
@@ -242,9 +244,11 @@ while (true) {
   buffer = frames.pop(); // keep any incomplete trailing frame
   for (const frame of frames) {
     if (!frame.startsWith("data: ")) continue;
-    const event = JSON.parse(frame.slice(6));
-    if (event.type === "segment") console.log(event.text);
-    if (event.type === "done") console.log("Full text:", event.text);
+    const payload = frame.slice(6);
+    if (payload.startsWith("[DONE]")) break;
+    const event = JSON.parse(payload);
+    if (event.type === "transcript.text.delta") console.log(event.delta);
+    if (event.type === "transcript.text.done") console.log("Full text:", event.text);
   }
 }
 ```

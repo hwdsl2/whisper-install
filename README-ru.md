@@ -204,17 +204,19 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
   -F stream=true
 ```
 
-**SSE-ответ** (одно событие на сегмент, затем финальное событие `done`):
+**SSE-ответ** (используется [протокол потоковой транскрипции OpenAI](https://platform.openai.com/docs/guides/speech-to-text#streaming-transcriptions)):
 
 ```
-data: {"type":"segment","start":0.0,"end":2.4,"text":"Hello, how are you?"}
+data: {"type":"transcript.text.delta","delta":"Hello, how are you?"}
 
-data: {"type":"segment","start":2.8,"end":5.1,"text":"I'm doing well, thank you."}
+data: {"type":"transcript.text.delta","delta":" I'm doing well, thank you."}
 
-data: {"type":"done","text":"Hello, how are you? I'm doing well, thank you."}
+data: {"type":"transcript.text.done","text":"Hello, how are you? I'm doing well, thank you."}
+
+data: [DONE]
 ```
 
-Первый сегмент обычно приходит в течение 1–3 секунд после загрузки. Каждое событие `segment` включает временные метки `start`/`end` в секундах. Финальное событие `done` содержит полный собранный транскрипт, эквивалентный стандартному ответу `json`.
+Первый инкрементальный текст обычно приходит через 1–3 секунды после загрузки. Каждое событие `transcript.text.delta` содержит инкрементальный текст только что декодированного сегмента. Финальное событие `transcript.text.done` содержит полный собранный текст транскрипции — аналог стандартного ответа `json`.
 
 <details>
 <summary><strong>Пример — потоковая передача из браузера с помощью <code>fetch</code></strong></summary>
@@ -242,9 +244,11 @@ while (true) {
   buffer = frames.pop(); // сохраняем незавершённый хвостовой кадр
   for (const frame of frames) {
     if (!frame.startsWith("data: ")) continue;
-    const event = JSON.parse(frame.slice(6));
-    if (event.type === "segment") console.log(event.text);
-    if (event.type === "done") console.log("Полный текст:", event.text);
+    const payload = frame.slice(6);
+    if (payload.startsWith("[DONE]")) break;
+    const event = JSON.parse(payload);
+    if (event.type === "transcript.text.delta") console.log(event.delta);
+    if (event.type === "transcript.text.done") console.log("Полный текст:", event.text);
   }
 }
 ```
