@@ -19,7 +19,7 @@ WHISPER_SVC="/etc/systemd/system/whisper.service"
 WHISPER_TMPDIR="/run/whisper-temp"
 
 WS_API_URL="https://github.com/hwdsl2/vpn-extras/releases/download/v1.0.0/whisper_api_server.py"
-WS_API_SHA256="aea5f860bc71803bbf345527e612688a966077c010c47ea2bd2784ac5e089919"
+WS_API_SHA256="1f0f14ff8b86345e24edeb536f19e70493609176bd04132f8b413cf89247bce6"
 
 check_ip() {
   IP_REGEX='^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'

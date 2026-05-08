@@ -175,8 +175,12 @@ async def _stream_sse(
     temperature: float,
 ):
     """
-    Async generator that yields Server-Sent Events (SSE) frames, one per
-    transcribed segment, followed by a final 'done' frame.
+    Async generator that yields Server-Sent Events (SSE) frames using the
+    OpenAI streaming transcription protocol.
+
+    Event types emitted (see https://developers.openai.com/api/docs/guides/speech-to-text):
+      - transcript.text.delta  — incremental text as each segment is decoded
+      - transcript.text.done   — final assembled transcript
 
     Inference runs in a thread-pool worker so the event loop stays responsive
     while the CPU-bound model decodes the audio.  _inference_lock ensures that
@@ -216,18 +220,28 @@ async def _stream_sse(
                 break
             if isinstance(item, Exception):
                 logger.error("Streaming transcription error: %s", item)
-                yield f'data: {json.dumps({"type": "error", "detail": str(item)})}\n\n'
+                err_payload = json.dumps({
+                    "error": {
+                        "type": "transcription_error",
+                        "message": str(item),
+                    }
+                })
+                yield f"data: {err_payload}\n\n"
                 return
-            text_parts.append(item.text.strip())
-            payload = json.dumps({
-                "type": "segment",
-                "start": round(item.start, 3),
-                "end":   round(item.end, 3),
-                "text":  item.text.strip(),
-            })
-            yield f"data: {payload}\n\n"
-        # Final frame — assembled full transcript, mirrors the batch JSON response
-        yield f'data: {json.dumps({"type": "done", "text": " ".join(text_parts).strip()})}\n\n'
+            seg_text = item.text.strip()
+            if seg_text:
+                # Prepend space to separate from previous segments
+                delta = seg_text if not text_parts else " " + seg_text
+                text_parts.append(seg_text)
+                payload = json.dumps({
+                    "type": "transcript.text.delta",
+                    "delta": delta,
+                })
+                yield f"data: {payload}\n\n"
+        # Final frame — complete transcript (OpenAI transcript.text.done event)
+        full_text = " ".join(text_parts).strip()
+        yield f'data: {json.dumps({"type": "transcript.text.done", "text": full_text})}\n\n'
+        yield "data: [DONE]\n\n"
     finally:
         try:
             os.unlink(tmp_path)
@@ -305,11 +319,11 @@ async def transcribe(
     Accepts the same multipart/form-data parameters and returns the same
     response shapes.
 
-    When stream=true the response is text/event-stream (SSE).  Each event
-    carries a JSON object:
-      - segment frames: {"type":"segment","start":0.0,"end":2.1,"text":"..."}
-      - final frame:    {"type":"done","text":"full assembled transcript"}
-      - error frame:    {"type":"error","detail":"..."}
+    When stream=true the response is text/event-stream (SSE) using the OpenAI
+    streaming transcription protocol.  Each event carries a JSON object:
+      - delta frames: {"type":"transcript.text.delta","delta":"..."}
+      - final frame:  {"type":"transcript.text.done","text":"full transcript"}
+      - error frame:  {"error":{"type":"...","message":"..."}}
 
     Supported audio formats: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg, flac
     (all formats supported by ffmpeg).
