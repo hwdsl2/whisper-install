@@ -6,15 +6,16 @@
 
 Установщик сервера Whisper speech-to-text для Ubuntu, Debian, AlmaLinux, Rocky Linux, CentOS, RHEL и Fedora.
 
-Этот скрипт устанавливает и настраивает самостоятельно размещаемый сервер [Whisper](https://github.com/openai/whisper) speech-to-text API на базе [faster-whisper](https://github.com/SYSTRAN/faster-whisper), предоставляя совместимую с OpenAI конечную точку `/v1/audio/transcriptions`. Транскрибируйте аудиофайлы с помощью любого приложения, поддерживающего OpenAI audio API.
+Этот скрипт устанавливает и настраивает самостоятельно размещаемый сервер [Whisper](https://github.com/openai/whisper) speech-to-text API на базе [faster-whisper](https://github.com/SYSTRAN/faster-whisper), предоставляя совместимые с OpenAI конечные точки `/v1/audio/transcriptions` и `/v1/audio/translations`. Транскрибируйте и переводите аудиофайлы с помощью любого приложения, поддерживающего OpenAI audio API.
 
 **Возможности:**
 
 - Полностью автоматическая установка сервера Whisper без участия пользователя
 - Поддержка интерактивной установки с пользовательскими параметрами
 - Поддержка предварительной загрузки моделей и управления сервером
-- Совместимая с OpenAI конечная точка `/v1/audio/transcriptions` — переключите любое приложение одной строкой
+- Совместимые с OpenAI конечные точки `POST /v1/audio/transcriptions` и `POST /v1/audio/translations` — переключите любое приложение одной строкой
 - Потоковая транскрипция — получайте сегменты через SSE по мере декодирования, не дожидаясь полного файла
+- Временны́е метки на уровне слов — время начала/конца и оценки уверенности для каждого слова в выводе `verbose_json`
 - Несколько форматов вывода: `json`, `text`, `verbose_json`, `srt`, `vtt`
 - Офлайн/изолированный режим — работа без доступа к интернету с предварительно загруженными моделями (`WHISPER_LOCAL_ONLY`)
 - Аудио остаётся на вашем сервере — данные не передаются третьим сторонам
@@ -142,7 +143,7 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
 
 ## Справочник API
 
-API полностью совместим с [конечной точкой транскрипции аудио OpenAI](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create). Любое приложение, уже обращающееся к `https://api.openai.com/v1/audio/transcriptions`, может переключиться на самостоятельно размещаемый сервер, задав:
+API полностью совместим с конечными точками OpenAI для [транскрипции аудио](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create) и [перевода аудио](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Любое приложение, уже обращающееся к `https://api.openai.com/v1/audio/transcriptions`, может переключиться на самостоятельно размещаемый сервер, задав:
 
 ```
 OPENAI_BASE_URL=http://<ip-сервера>:9000
@@ -166,6 +167,7 @@ Content-Type: multipart/form-data
 | `response_format` | строка | — | Формат вывода. По умолчанию: `json`. См. [форматы ответа](#форматы-ответа). Игнорируется при `stream=true`. |
 | `temperature` | число с плавающей точкой | — | Температура выборки (0–1). По умолчанию: `0`. |
 | `stream` | булево значение | — | Включить SSE-стриминг. При значении `true` сегменты возвращаются как события `text/event-stream` по мере декодирования. По умолчанию: `false`. |
+| `timestamp_granularities[]` | массив | — | Гранулярность временны́х меток. Значения: `word`, `segment`. При включении `word` вывод `verbose_json` содержит массив `words` верхнего уровня с временны́ми метками и оценками уверенности для каждого слова. По умолчанию: `["segment"]`. |
 
 **Пример:**
 
@@ -271,6 +273,48 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json
+```
+
+**Пример — временны́е метки на уровне слов:**
+
+```bash
+curl http://<ip-сервера>:9000/v1/audio/transcriptions \
+  -F file=@audio.mp3 \
+  -F model=whisper-1 \
+  -F response_format=verbose_json \
+  -F "timestamp_granularities[]=word"
+```
+
+При включении `word` в `timestamp_granularities[]` ответ `verbose_json` содержит массив `words` верхнего уровня:
+
+```json
+{
+  "text": "Hello world.",
+  "words": [
+    {"word": "Hello", "start": 0.0, "end": 0.42, "probability": 0.98},
+    {"word": "world.", "start": 0.42, "end": 0.88, "probability": 0.97}
+  ],
+  "segments": [...]
+}
+```
+
+### Перевод аудио
+
+```
+POST /v1/audio/translations
+Content-Type: multipart/form-data
+```
+
+Переводит аудио на любом языке в английский текст. Прямая замена [конечной точки перевода аудио OpenAI](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Принимает те же параметры, что и конечная точка транскрипции (`file`, `model`, `prompt`, `response_format`, `temperature`, `stream`). Вывод всегда на английском языке.
+
+> **Примечание:** Перевод не поддерживается моделями только для английского языка (`.en`). Используйте многоязычную модель, например `base`, `small` или `large-v3-turbo`.
+
+**Пример:**
+
+```bash
+curl http://<ip-сервера>:9000/v1/audio/translations \
+  -F file=@french-audio.mp3 \
+  -F model=whisper-1
 ```
 
 ### Список моделей
@@ -384,6 +428,7 @@ sudo systemctl restart whisper
 | `WHISPER_API_KEY` | Необязательный Bearer-токен. Если задан, все API-запросы должны содержать `Authorization: Bearer <key>`. | *(не задано)* |
 | `WHISPER_LOG_LEVEL` | Уровень логирования: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. | `INFO` |
 | `WHISPER_LOCAL_ONLY` | При установке любого непустого значения отключает все загрузки моделей с HuggingFace. Для офлайн или изолированных развёртываний с предварительно загруженными моделями. | *(не задано)* |
+| `WHISPER_WORD_TIMESTAMPS` | При значении `true` глобально включает временны́е метки на уровне слов для всех запросов. Вывод `verbose_json` будет содержать массив `words` верхнего уровня с временны́ми метками и оценками уверенности для каждого слова. Также можно включить для отдельного запроса через `timestamp_granularities[]=word`. | *(не задано)* |
 
 ## Смена модели
 

@@ -6,15 +6,16 @@
 
 Whisper speech-to-text server installer for Ubuntu, Debian, AlmaLinux, Rocky Linux, CentOS, RHEL and Fedora.
 
-This script installs and configures a self-hosted [Whisper](https://github.com/openai/whisper) speech-to-text API server powered by [faster-whisper](https://github.com/SYSTRAN/faster-whisper), providing an OpenAI-compatible `/v1/audio/transcriptions` endpoint. Transcribe audio files using any app that supports the OpenAI audio API.
+This script installs and configures a self-hosted [Whisper](https://github.com/openai/whisper) speech-to-text API server powered by [faster-whisper](https://github.com/SYSTRAN/faster-whisper), providing OpenAI-compatible `/v1/audio/transcriptions` and `/v1/audio/translations` endpoints. Transcribe and translate audio files using any app that supports the OpenAI audio API.
 
 **Features:**
 
 - Fully automated Whisper server setup, no user input needed
 - Supports interactive install using custom options
 - Supports pre-downloading models and managing the server
-- OpenAI-compatible `/v1/audio/transcriptions` API endpoint — switch any app with a one-line change
+- OpenAI-compatible `POST /v1/audio/transcriptions` and `POST /v1/audio/translations` endpoints — switch any app with a one-line change
 - Streaming transcription — receive segments via SSE as they are decoded, with no waiting for the full file
+- Word-level timestamps — per-word start/end times and confidence scores in `verbose_json` output
 - Multiple output formats: `json`, `text`, `verbose_json`, `srt`, `vtt`
 - Offline/air-gapped mode — run without internet access using pre-cached models (`WHISPER_LOCAL_ONLY`)
 - Audio stays on your server — no data sent to third parties
@@ -142,7 +143,7 @@ curl http://<server-ip>:9000/v1/audio/transcriptions \
 
 ## API reference
 
-The API is fully compatible with [OpenAI's audio transcription endpoint](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create). Any application already calling `https://api.openai.com/v1/audio/transcriptions` can switch to self-hosted by setting:
+The API is fully compatible with OpenAI's [audio transcription](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create) and [audio translation](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create) endpoints. Any application already calling `https://api.openai.com/v1/audio/transcriptions` can switch to self-hosted by setting:
 
 ```
 OPENAI_BASE_URL=http://<server-ip>:9000
@@ -166,6 +167,7 @@ Content-Type: multipart/form-data
 | `response_format` | string | — | Output format. Default: `json`. See [response formats](#response-formats). Ignored when `stream=true`. |
 | `temperature` | float | — | Sampling temperature (0–1). Default: `0`. |
 | `stream` | boolean | — | Enable SSE streaming. When `true`, segments are returned as `text/event-stream` events as they are decoded. Default: `false`. |
+| `timestamp_granularities[]` | array | — | Timestamp granularities to populate. Values: `word`, `segment`. When `word` is included, `verbose_json` output includes a top-level `words` array with per-word timing and confidence. Default: `["segment"]`. |
 
 **Example:**
 
@@ -271,6 +273,48 @@ curl http://<server-ip>:9000/v1/audio/transcriptions \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json
+```
+
+**Example — word-level timestamps:**
+
+```bash
+curl http://<server-ip>:9000/v1/audio/transcriptions \
+  -F file=@audio.mp3 \
+  -F model=whisper-1 \
+  -F response_format=verbose_json \
+  -F "timestamp_granularities[]=word"
+```
+
+When `timestamp_granularities[]` includes `word`, the `verbose_json` response includes a top-level `words` array:
+
+```json
+{
+  "text": "Hello world.",
+  "words": [
+    {"word": "Hello", "start": 0.0, "end": 0.42, "probability": 0.98},
+    {"word": "world.", "start": 0.42, "end": 0.88, "probability": 0.97}
+  ],
+  "segments": [...]
+}
+```
+
+### Translate audio
+
+```
+POST /v1/audio/translations
+Content-Type: multipart/form-data
+```
+
+Translates audio in any language to English text. Drop-in replacement for [OpenAI's audio translation endpoint](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Accepts the same parameters as the transcription endpoint (`file`, `model`, `prompt`, `response_format`, `temperature`, `stream`). The output is always in English.
+
+> **Note:** Translation is not supported with English-only (`.en`) models. Use a multilingual model such as `base`, `small`, or `large-v3-turbo`.
+
+**Example:**
+
+```bash
+curl http://<server-ip>:9000/v1/audio/translations \
+  -F file=@french-audio.mp3 \
+  -F model=whisper-1
 ```
 
 ### List models
@@ -384,6 +428,7 @@ All variables are optional. If not set, defaults are used automatically.
 | `WHISPER_API_KEY` | Optional Bearer token. If set, all API requests must include `Authorization: Bearer <key>`. | *(not set)* |
 | `WHISPER_LOG_LEVEL` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. | `INFO` |
 | `WHISPER_LOCAL_ONLY` | When set to any non-empty value, disables all HuggingFace model downloads. For offline or air-gapped deployments with pre-cached models. | *(not set)* |
+| `WHISPER_WORD_TIMESTAMPS` | When set to `true`, enables word-level timestamps globally for all requests. The `verbose_json` output will include a top-level `words` array with per-word timing and confidence. Can also be enabled per-request via `timestamp_granularities[]=word`. | *(not set)* |
 
 ## Switching models
 

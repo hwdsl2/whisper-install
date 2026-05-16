@@ -6,15 +6,16 @@
 
 適用於 Ubuntu、Debian、AlmaLinux、Rocky Linux、CentOS、RHEL 和 Fedora 的 Whisper 語音轉文字伺服器安裝腳本。
 
-本腳本安裝並設定由 [faster-whisper](https://github.com/SYSTRAN/faster-whisper) 驅動的自託管 [Whisper](https://github.com/openai/whisper) 語音轉文字 API 伺服器，提供相容 OpenAI 的 `/v1/audio/transcriptions` 介面。使用任何支援 OpenAI 音訊 API 的應用程式轉錄音訊檔案。
+本腳本安裝並設定由 [faster-whisper](https://github.com/SYSTRAN/faster-whisper) 驅動的自託管 [Whisper](https://github.com/openai/whisper) 語音轉文字 API 伺服器，提供相容 OpenAI 的 `/v1/audio/transcriptions` 和 `/v1/audio/translations` 介面。使用任何支援 OpenAI 音訊 API 的應用程式轉錄和翻譯音訊檔案。
 
 **功能特性：**
 
 - 全自動 Whisper 伺服器安裝，無需使用者輸入
 - 支援使用自訂選項進行互動式安裝
 - 支援預下載模型和管理伺服器
-- 相容 OpenAI 的 `/v1/audio/transcriptions` API 介面 —— 一行更改即可切換任意應用程式
+- 相容 OpenAI 的 `POST /v1/audio/transcriptions` 和 `POST /v1/audio/translations` 介面 —— 一行更改即可切換任意應用程式
 - 串流轉錄 —— 透過 SSE 即時接收解碼片段，無需等待完整檔案
+- 逐字時間戳記 —— `verbose_json` 輸出中包含每個字詞的開始/結束時間和信心分數
 - 多種輸出格式：`json`、`text`、`verbose_json`、`srt`、`vtt`
 - 離線/隔離網路模式 —— 使用預快取模型在無網路環境中執行（`WHISPER_LOCAL_ONLY`）
 - 音訊保留在你的伺服器上 —— 不向第三方傳送資料
@@ -142,7 +143,7 @@ curl http://<伺服器IP>:9000/v1/audio/transcriptions \
 
 ## API 參考
 
-該 API 與 [OpenAI 的音訊轉錄介面](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create)完全相容。任何已呼叫 `https://api.openai.com/v1/audio/transcriptions` 的應用程式，只需設定以下內容即可切換至自託管：
+該 API 與 OpenAI 的[音訊轉錄](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create)和[音訊翻譯](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)介面完全相容。任何已呼叫 `https://api.openai.com/v1/audio/transcriptions` 的應用程式，只需設定以下內容即可切換至自託管：
 
 ```
 OPENAI_BASE_URL=http://<伺服器IP>:9000
@@ -166,6 +167,7 @@ Content-Type: multipart/form-data
 | `response_format` | 字串 | — | 輸出格式。預設：`json`。參見[回應格式](#回應格式)。當 `stream=true` 時忽略此參數。 |
 | `temperature` | 浮點數 | — | 取樣溫度（0–1）。預設：`0`。 |
 | `stream` | 布林值 | — | 啟用 SSE 串流傳輸。為 `true` 時，片段以 `text/event-stream` 事件的形式即時返回。預設：`false`。 |
+| `timestamp_granularities[]` | 陣列 | — | 要填充的時間戳記粒度。值：`word`、`segment`。包含 `word` 時，`verbose_json` 輸出的頂層包含帶有逐字時間和信心度的 `words` 陣列。預設：`["segment"]`。 |
 
 **範例：**
 
@@ -271,6 +273,48 @@ curl http://<伺服器IP>:9000/v1/audio/transcriptions \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json
+```
+
+**範例 —— 逐字時間戳記：**
+
+```bash
+curl http://<伺服器IP>:9000/v1/audio/transcriptions \
+  -F file=@audio.mp3 \
+  -F model=whisper-1 \
+  -F response_format=verbose_json \
+  -F "timestamp_granularities[]=word"
+```
+
+`timestamp_granularities[]` 包含 `word` 時，`verbose_json` 回應的頂層包含 `words` 陣列：
+
+```json
+{
+  "text": "Hello world.",
+  "words": [
+    {"word": "Hello", "start": 0.0, "end": 0.42, "probability": 0.98},
+    {"word": "world.", "start": 0.42, "end": 0.88, "probability": 0.97}
+  ],
+  "segments": [...]
+}
+```
+
+### 翻譯音訊
+
+```
+POST /v1/audio/translations
+Content-Type: multipart/form-data
+```
+
+將任意語言的音訊翻譯為英文文字。是 [OpenAI 音訊翻譯介面](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)的直接替代品。接受與轉錄介面相同的參數（`file`、`model`、`prompt`、`response_format`、`temperature`、`stream`）。輸出始終為英文。
+
+> **注意：** 翻譯功能不支援僅限英語的（`.en`）模型。請使用多語言模型，如 `base`、`small` 或 `large-v3-turbo`。
+
+**範例：**
+
+```bash
+curl http://<伺服器IP>:9000/v1/audio/translations \
+  -F file=@french-audio.mp3 \
+  -F model=whisper-1
 ```
 
 ### 列出模型
@@ -384,6 +428,7 @@ sudo systemctl restart whisper
 | `WHISPER_API_KEY` | 選用的 Bearer 權杖。設定後，所有 API 請求必須包含 `Authorization: Bearer <key>`。 | *（未設定）* |
 | `WHISPER_LOG_LEVEL` | 日誌級別：`DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`。 | `INFO` |
 | `WHISPER_LOCAL_ONLY` | 設定為任意非空值時，停用所有 HuggingFace 模型下載。適用於使用預快取模型的離線或隔離網路部署。 | *（未設定）* |
+| `WHISPER_WORD_TIMESTAMPS` | 設定為 `true` 時，為所有請求全域啟用逐字時間戳記。`verbose_json` 輸出將包含帶有逐字時間和信心度的頂層 `words` 陣列。也可透過 `timestamp_granularities[]=word` 按請求啟用。 | *（未設定）* |
 
 ## 切換模型
 
