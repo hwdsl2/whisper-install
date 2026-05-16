@@ -19,7 +19,7 @@ WHISPER_SVC="/etc/systemd/system/whisper.service"
 WHISPER_TMPDIR="/run/whisper-temp"
 
 WS_API_URL="https://github.com/hwdsl2/vpn-extras/releases/download/v1.0.0/whisper_api_server.py"
-WS_API_SHA256="1f0f14ff8b86345e24edeb536f19e70493609176bd04132f8b413cf89247bce6"
+WS_API_SHA256="f0bad6b8a32b9a81e968bcd90ba663ba65fb4113276d56f3cdf6e532caa2f4d9"
 
 check_ip() {
   IP_REGEX='^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
@@ -540,6 +540,13 @@ WHISPER_API_KEY=
 # Set to any non-empty value to disable model downloads (air-gap / offline mode).
 # The model must already be present in ${WHISPER_DATA}.
 WHISPER_LOCAL_ONLY=
+
+# Enable word-level timestamps globally (default: unset / false)
+# - When set to 'true', all transcription requests will include word-level
+#   timestamps in the verbose_json output (a 'words' array with per-word
+#   start/end times and confidence scores).
+# - Can also be enabled per-request via the timestamp_granularities[] API param.
+WHISPER_WORD_TIMESTAMPS=
 EOF
   chmod 640 "$WHISPER_CONF"
   chown root:whisper "$WHISPER_CONF"
@@ -657,6 +664,7 @@ do_show_info() {
   echo
   echo "API endpoints:"
   echo "  POST http://${server_ip}:${WHISPER_PORT}/v1/audio/transcriptions"
+  echo "  POST http://${server_ip}:${WHISPER_PORT}/v1/audio/translations"
   echo "  GET  http://${server_ip}:${WHISPER_PORT}/v1/models"
   echo "  GET  http://${server_ip}:${WHISPER_PORT}/docs     (interactive docs)"
   echo

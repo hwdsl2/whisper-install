@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Whisper Speech-to-Text API Server
-Provides an OpenAI-compatible /v1/audio/transcriptions endpoint
-powered by faster-whisper.
+Provides OpenAI-compatible /v1/audio/transcriptions and
+/v1/audio/translations endpoints powered by faster-whisper.
 
 https://github.com/hwdsl2/whisper-install
 
@@ -20,7 +20,7 @@ import tempfile
 import threading
 import time
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import List, Optional
 
 import uvicorn
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
@@ -45,15 +45,15 @@ logger = logging.getLogger("whisper_server")
 _model = None       # WhisperModel instance
 _model_name = None  # name as loaded (e.g. "base")
 _beam_size = 5      # beam size used for transcription
+_word_timestamps = False  # default for word-level timestamps
 
 # Serialise all inference calls (batch and streaming) so that CTranslate2 is
 # never called concurrently from multiple threads.
 _inference_lock = threading.Lock()
 
-
 def _load_model() -> None:
     """Import and initialise the faster-whisper model from environment config."""
-    global _model, _model_name, _beam_size
+    global _model, _model_name, _beam_size, _word_timestamps
 
     from faster_whisper import WhisperModel  # deferred — keeps import fast
 
@@ -64,10 +64,11 @@ def _load_model() -> None:
     cache_dir        = os.environ.get("HF_HOME", "/var/lib/whisper")
     local_files_only = bool(os.environ.get("WHISPER_LOCAL_ONLY", "").strip())
     _beam_size       = int(os.environ.get("WHISPER_BEAM", "5"))
+    _word_timestamps = os.environ.get("WHISPER_WORD_TIMESTAMPS", "").strip().lower() == "true"
 
     logger.info(
-        "Loading model '%s' | device=%s compute_type=%s threads=%d beam=%d local_only=%s cache=%s",
-        model_name, device, compute_type, threads, _beam_size, local_files_only, cache_dir,
+        "Loading model '%s' | device=%s compute_type=%s threads=%d beam=%d word_ts=%s local_only=%s cache=%s",
+        model_name, device, compute_type, threads, _beam_size, _word_timestamps, local_files_only, cache_dir,
     )
     t0 = time.monotonic()
     _model = WhisperModel(
@@ -81,12 +82,10 @@ def _load_model() -> None:
     _model_name = model_name
     logger.info("Model '%s' ready in %.1fs", model_name, time.monotonic() - t0)
 
-
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     _load_model()
     yield
-
 
 # ---------------------------------------------------------------------------
 # FastAPI application
@@ -105,7 +104,6 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 # Auth dependency
 # ---------------------------------------------------------------------------
-
 
 def _verify_api_key(authorization: Optional[str] = Header(default=None)) -> None:
     """
@@ -126,11 +124,9 @@ def _verify_api_key(authorization: Optional[str] = Header(default=None)) -> None
     if parts[1] != required:
         raise HTTPException(status_code=401, detail="Invalid API key.")
 
-
 # ---------------------------------------------------------------------------
 # Timestamp helpers
 # ---------------------------------------------------------------------------
-
 
 def _fmt_ts(seconds: float, fmt: str) -> str:
     """Format a float second offset as an SRT or VTT timestamp string."""
@@ -141,38 +137,41 @@ def _fmt_ts(seconds: float, fmt: str) -> str:
     sep = "," if fmt == "srt" else "."
     return f"{h:02d}:{m:02d}:{s:02d}{sep}{ms:03d}"
 
-
 def _to_srt(segments) -> str:
     lines = []
     for i, seg in enumerate(segments, start=1):
+        text = seg.text.strip() if hasattr(seg, "text") else seg.get("text", "").strip()
+        start = seg.start if hasattr(seg, "start") else seg["start"]
+        end = seg.end if hasattr(seg, "end") else seg["end"]
         lines.append(
             f"{i}\n"
-            f"{_fmt_ts(seg.start, 'srt')} --> {_fmt_ts(seg.end, 'srt')}\n"
-            f"{seg.text.strip()}\n"
+            f"{_fmt_ts(start, 'srt')} --> {_fmt_ts(end, 'srt')}\n"
+            f"{text}\n"
         )
     return "\n".join(lines)
-
 
 def _to_vtt(segments) -> str:
     lines = ["WEBVTT\n"]
     for seg in segments:
+        text = seg.text.strip() if hasattr(seg, "text") else seg.get("text", "").strip()
+        start = seg.start if hasattr(seg, "start") else seg["start"]
+        end = seg.end if hasattr(seg, "end") else seg["end"]
         lines.append(
-            f"{_fmt_ts(seg.start, 'vtt')} --> {_fmt_ts(seg.end, 'vtt')}\n"
-            f"{seg.text.strip()}\n"
+            f"{_fmt_ts(start, 'vtt')} --> {_fmt_ts(end, 'vtt')}\n"
+            f"{text}\n"
         )
     return "\n".join(lines)
-
 
 # ---------------------------------------------------------------------------
 # SSE streaming helper
 # ---------------------------------------------------------------------------
-
 
 async def _stream_sse(
     tmp_path: str,
     lang: Optional[str],
     prompt: Optional[str],
     temperature: float,
+    task: str = "transcribe",
 ):
     """
     Async generator that yields Server-Sent Events (SSE) frames using the
@@ -198,6 +197,7 @@ async def _stream_sse(
                 segs_gen, _ = _model.transcribe(
                     tmp_path,
                     language=lang,
+                    task=task,
                     initial_prompt=prompt or None,
                     temperature=temperature,
                     beam_size=_beam_size,
@@ -248,16 +248,14 @@ async def _stream_sse(
         except OSError:
             pass
 
-
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
-
 @app.get("/health", include_in_schema=False)
 async def health():
+    """Container liveness probe — used by the server to detect startup completion."""
     return {"status": "ok", "model": _model_name}
-
 
 @app.get("/v1/models")
 async def list_models(_auth: None = Depends(_verify_api_key)):
@@ -277,63 +275,43 @@ async def list_models(_auth: None = Depends(_verify_api_key)):
         ],
     }
 
-
-@app.post("/v1/audio/transcriptions")
-async def transcribe(
-    file: UploadFile = File(..., description="Audio file to transcribe"),
-    model: str = Form(
-        default="whisper-1",
-        description="Model identifier (ignored — active model is used)",
-    ),
-    language: Optional[str] = Form(
-        default=None,
-        description="BCP-47 language code (e.g. 'en'). Omit or set to 'auto' for autodetect.",
-    ),
-    prompt: Optional[str] = Form(
-        default=None,
-        description="Optional text to guide the model's style or continue a previous segment.",
-    ),
-    response_format: str = Form(
-        default="json",
-        description="Output format: json, text, verbose_json, srt, vtt",
-    ),
-    temperature: float = Form(
-        default=0.0,
-        description="Sampling temperature between 0 and 1.",
-    ),
-    stream: Optional[str] = Form(
-        default=None,
-        description=(
-            "Stream segments as Server-Sent Events (text/event-stream). "
-            "When true, the response is a series of 'data:' frames — one per "
-            "decoded segment — followed by a final 'done' frame. "
-            "response_format is ignored when stream=true."
-        ),
-    ),
-    _auth: None = Depends(_verify_api_key),
+async def _handle_audio(
+    task: str,
+    file: UploadFile,
+    model: str,
+    language: Optional[str],
+    prompt: Optional[str],
+    response_format: str,
+    temperature: float,
+    stream: Optional[str],
+    timestamp_granularities: Optional[List[str]] = None,
 ):
     """
-    Transcribe an audio file.
-
-    Drop-in replacement for OpenAI's POST /v1/audio/transcriptions endpoint.
-    Accepts the same multipart/form-data parameters and returns the same
-    response shapes.
-
-    When stream=true the response is text/event-stream (SSE) using the OpenAI
-    streaming transcription protocol.  Each event carries a JSON object:
-      - delta frames: {"type":"transcript.text.delta","delta":"..."}
-      - final frame:  {"type":"transcript.text.done","text":"full transcript"}
-      - error frame:  {"error":{"type":"...","message":"..."}}
-
-    Supported audio formats: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg, flac
-    (all formats supported by ffmpeg).
+    Shared implementation for transcription and translation endpoints.
+    ``task`` is either ``"transcribe"`` or ``"translate"``.
     """
     if _model is None:
         raise HTTPException(status_code=503, detail="Model is not loaded yet. Please retry.")
 
+    # Block translation on English-only models
+    if task == "translate" and _model_name and _model_name.endswith(".en"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Translation is not supported with English-only model '{_model_name}'. "
+                   "Use a multilingual model (e.g. base, small, large-v3-turbo).",
+        )
+
     # Normalise the stream form field: the string "true" (case-insensitive) enables streaming.
     # Using Optional[str] instead of bool avoids Pydantic version-dependent coercion differences.
     stream_flag: bool = stream is not None and stream.strip().lower() == "true"
+
+    # Resolve word_timestamps:
+    #   timestamp_granularities (spec-compliant) > WHISPER_WORD_TIMESTAMPS env var > False
+    wt_flag: bool
+    if timestamp_granularities and "word" in timestamp_granularities:
+        wt_flag = True
+    else:
+        wt_flag = _word_timestamps
 
     # Validate response_format (only relevant for non-streaming responses)
     valid_formats = {"json", "text", "verbose_json", "srt", "vtt"}
@@ -372,17 +350,19 @@ async def transcribe(
         raise HTTPException(status_code=500, detail=f"Failed to save upload: {exc}") from exc
 
     logger.info(
-        "Transcribing '%s' (%d bytes) | lang=%s format=%s stream=%s",
-        original_name, len(content), lang or "auto", response_format, stream_flag,
+        "%s '%s' (%d bytes) | lang=%s format=%s stream=%s word_ts=%s",
+        "Translating" if task == "translate" else "Transcribing",
+        original_name, len(content), lang or "auto", response_format, stream_flag, wt_flag,
     )
 
     # ------------------------------------------------------------------
     # Streaming path — inference runs in a thread; temp file cleaned up
     # inside the generator when the stream ends or the client disconnects.
+    # Word timestamps are silently ignored in streaming mode.
     # ------------------------------------------------------------------
     if stream_flag:
         return StreamingResponse(
-            _stream_sse(tmp_path, lang, prompt, temperature),
+            _stream_sse(tmp_path, lang, prompt, temperature, task),
             media_type="text/event-stream",
             headers={
                 "X-Accel-Buffering": "no",   # disable nginx proxy buffering
@@ -391,16 +371,18 @@ async def transcribe(
         )
 
     # ------------------------------------------------------------------
-    # Batch path (original behaviour — unchanged)
+    # Batch path
     # ------------------------------------------------------------------
     try:
         with _inference_lock:
             segments_gen, info = _model.transcribe(
                 tmp_path,
                 language=lang,
+                task=task,
                 initial_prompt=prompt or None,
                 temperature=temperature,
                 beam_size=_beam_size,
+                word_timestamps=wt_flag,
                 vad_filter=True,
             )
             segments = list(segments_gen)  # consume the generator before the temp file is removed
@@ -429,33 +411,175 @@ async def transcribe(
         return PlainTextResponse(_to_vtt(segments), media_type="text/plain")
 
     if response_format == "verbose_json":
-        return JSONResponse({
-            "task": "transcribe",
+        seg_list = []
+        all_words = []
+        for idx, seg in enumerate(segments):
+            seg_dict = {
+                "id": idx,
+                "seek": seg.seek,
+                "start": round(seg.start, 3),
+                "end": round(seg.end, 3),
+                "text": seg.text.strip(),
+                "tokens": seg.tokens,
+                "temperature": round(seg.temperature, 3) if seg.temperature is not None else temperature,
+                "avg_logprob": round(seg.avg_logprob, 4),
+                "compression_ratio": round(seg.compression_ratio, 4),
+                "no_speech_prob": round(seg.no_speech_prob, 4),
+            }
+            if wt_flag and seg.words:
+                all_words.extend(
+                    {
+                        "word": w.word.strip(),
+                        "start": round(w.start, 3),
+                        "end": round(w.end, 3),
+                        "probability": round(w.probability, 4),
+                    }
+                    for w in seg.words
+                )
+            seg_list.append(seg_dict)
+        resp = {
+            "task": task,
             "language": info.language,
             "language_probability": round(info.language_probability, 4),
             "duration": round(info.duration, 3),
             "duration_after_vad": round(info.duration_after_vad, 3),
             "text": full_text,
-            "segments": [
-                {
-                    "id": idx,
-                    "seek": seg.seek,
-                    "start": round(seg.start, 3),
-                    "end": round(seg.end, 3),
-                    "text": seg.text.strip(),
-                    "tokens": seg.tokens,
-                    "temperature": round(seg.temperature, 3) if seg.temperature is not None else temperature,
-                    "avg_logprob": round(seg.avg_logprob, 4),
-                    "compression_ratio": round(seg.compression_ratio, 4),
-                    "no_speech_prob": round(seg.no_speech_prob, 4),
-                }
-                for idx, seg in enumerate(segments)
-            ],
-        })
+            "segments": seg_list,
+        }
+        if wt_flag:
+            resp["words"] = all_words
+        return JSONResponse(resp)
 
     # Default: json — matches OpenAI's minimal response shape
     return JSONResponse({"text": full_text})
 
+@app.post("/v1/audio/transcriptions")
+async def transcribe(
+    file: UploadFile = File(..., description="Audio file to transcribe"),
+    model: str = Form(
+        default="whisper-1",
+        description="Model identifier (ignored — active model is used)",
+    ),
+    language: Optional[str] = Form(
+        default=None,
+        description="BCP-47 language code (e.g. 'en'). Omit or set to 'auto' for autodetect.",
+    ),
+    prompt: Optional[str] = Form(
+        default=None,
+        description="Optional text to guide the model's style or continue a previous segment.",
+    ),
+    response_format: str = Form(
+        default="json",
+        description="Output format: json, text, verbose_json, srt, vtt",
+    ),
+    temperature: float = Form(
+        default=0.0,
+        description="Sampling temperature between 0 and 1.",
+    ),
+    stream: Optional[str] = Form(
+        default=None,
+        description=(
+            "Stream segments as Server-Sent Events (text/event-stream). "
+            "When true, the response is a series of 'data:' frames — one per "
+            "decoded segment — followed by a final 'done' frame. "
+            "response_format is ignored when stream=true."
+        ),
+    ),
+    timestamp_granularities: Optional[List[str]] = Form(
+        default=None,
+        alias="timestamp_granularities[]",
+        description=(
+            "The timestamp granularities to populate for this transcription. "
+            "response_format must be verbose_json. Supported values: 'word', 'segment'. "
+            "Default: ['segment']."
+        ),
+    ),
+    _auth: None = Depends(_verify_api_key),
+):
+    """
+    Transcribe an audio file.
+
+    Drop-in replacement for OpenAI's POST /v1/audio/transcriptions endpoint.
+    Accepts the same multipart/form-data parameters and returns the same
+    response shapes.
+
+    When stream=true the response is text/event-stream (SSE) using the OpenAI
+    streaming transcription protocol.  Each event carries a JSON object:
+      - delta frames: {"type":"transcript.text.delta","delta":"..."}
+      - final frame:  {"type":"transcript.text.done","text":"full transcript"}
+      - error frame:  {"error":{"type":"...","message":"..."}}
+
+    Supported audio formats: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg, flac
+    (all formats supported by ffmpeg).
+    """
+    return await _handle_audio(
+        task="transcribe",
+        file=file,
+        model=model,
+        language=language,
+        prompt=prompt,
+        response_format=response_format,
+        temperature=temperature,
+        stream=stream,
+        timestamp_granularities=timestamp_granularities,
+    )
+
+@app.post("/v1/audio/translations")
+async def translate(
+    file: UploadFile = File(..., description="Audio file to translate to English"),
+    model: str = Form(
+        default="whisper-1",
+        description="Model identifier (ignored — active model is used)",
+    ),
+    language: Optional[str] = Form(
+        default=None,
+        description="BCP-47 language code of the source audio (e.g. 'fr'). Omit for autodetect.",
+    ),
+    prompt: Optional[str] = Form(
+        default=None,
+        description="Optional text to guide the model's style or continue a previous segment.",
+    ),
+    response_format: str = Form(
+        default="json",
+        description="Output format: json, text, verbose_json, srt, vtt",
+    ),
+    temperature: float = Form(
+        default=0.0,
+        description="Sampling temperature between 0 and 1.",
+    ),
+    stream: Optional[str] = Form(
+        default=None,
+        description=(
+            "Stream segments as Server-Sent Events (text/event-stream). "
+            "When true, the response is a series of 'data:' frames — one per "
+            "decoded segment — followed by a final 'done' frame. "
+            "response_format is ignored when stream=true."
+        ),
+    ),
+    _auth: None = Depends(_verify_api_key),
+):
+    """
+    Translate audio to English text.
+
+    Drop-in replacement for OpenAI's POST /v1/audio/translations endpoint.
+    Accepts the same multipart/form-data parameters and returns the same
+    response shapes. The output is always in English.
+
+    Not supported with English-only (.en) models — use a multilingual model.
+
+    Supported audio formats: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg, flac
+    (all formats supported by ffmpeg).
+    """
+    return await _handle_audio(
+        task="translate",
+        file=file,
+        model=model,
+        language=language,
+        prompt=prompt,
+        response_format=response_format,
+        temperature=temperature,
+        stream=stream,
+    )
 
 # ---------------------------------------------------------------------------
 # Entry point
