@@ -636,6 +636,8 @@ finish_setup() {
   echo
   echo "Configuration file: $WHISPER_CONF"
   echo
+  echo "Community discussions and updates:"
+  echo "https://www.reddit.com/r/selfhostedstack/"
 }
 
 # ---------------------------------------------------------------------------
