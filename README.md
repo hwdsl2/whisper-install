@@ -34,7 +34,7 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 
 - 📬 [Subscribe for project updates](https://selfhostedstack.beehiiv.com/subscribe?utm_campaign=ai) (1–2 emails/month) — get free AI and VPN deployment guides (PDF)
 - 💬 Join the [r/selfhostedstack](https://www.reddit.com/r/selfhostedstack/) community for discussions and showcases
-- ⭐ Star the repository if it is useful to you
+- ⭐ Star the repository if you find it useful — it helps others discover it
 
 ## Requirements
 
