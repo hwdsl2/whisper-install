@@ -51,6 +51,41 @@ _word_timestamps = False  # default for word-level timestamps
 # never called concurrently from multiple threads.
 _inference_lock = threading.Lock()
 
+def _env_int(name: str, default: int) -> int:
+    """Read an integer env var, falling back to ``default`` when unset or empty.
+
+    ``os.environ.get(name, default)`` only applies the default when the variable
+    is absent. systemd's ``EnvironmentFile=`` directive sets bare ``VAR=`` lines
+    in /etc/whisper/whisper.conf as empty strings (not absent), so a user who
+    clears a numeric option would otherwise hit ValueError in int(). Treat
+    empty/whitespace values as "use the default".
+    """
+    val = os.environ.get(name, "").strip()
+    if not val:
+        return default
+    try:
+        return int(val)
+    except ValueError:
+        logger.error(
+            "Invalid value for %s: %r (expected an integer); using default %s",
+            name, val, default,
+        )
+        return default
+
+def _env_float(name: str, default: float) -> float:
+    """Read a float env var, falling back to ``default`` when unset or empty."""
+    val = os.environ.get(name, "").strip()
+    if not val:
+        return default
+    try:
+        return float(val)
+    except ValueError:
+        logger.error(
+            "Invalid value for %s: %r (expected a number); using default %s",
+            name, val, default,
+        )
+        return default
+
 def _load_model() -> None:
     """Import and initialise the faster-whisper model from environment config."""
     global _model, _model_name, _beam_size, _word_timestamps
@@ -60,10 +95,10 @@ def _load_model() -> None:
     model_name       = os.environ.get("WHISPER_MODEL",        "base").strip()
     device           = os.environ.get("WHISPER_DEVICE",       "cpu").strip()
     compute_type     = os.environ.get("WHISPER_COMPUTE_TYPE", "int8").strip()
-    threads          = int(os.environ.get("WHISPER_THREADS",  "2"))
+    threads          = _env_int("WHISPER_THREADS", 2)
     cache_dir        = os.environ.get("HF_HOME", "/var/lib/whisper")
     local_files_only = bool(os.environ.get("WHISPER_LOCAL_ONLY", "").strip())
-    _beam_size       = int(os.environ.get("WHISPER_BEAM", "5"))
+    _beam_size       = _env_int("WHISPER_BEAM", 5)
     _word_timestamps = os.environ.get("WHISPER_WORD_TIMESTAMPS", "").strip().lower() == "true"
 
     logger.info(
@@ -586,8 +621,9 @@ async def translate(
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    port = int(os.environ.get("WHISPER_PORT", "9000"))
-    host = os.environ.get("WHISPER_LISTEN_ADDR", "0.0.0.0").strip()
+    port = _env_int("WHISPER_PORT", 9000)
+    # Fall back to 0.0.0.0 when WHISPER_LISTEN_ADDR is unset or empty
+    host = os.environ.get("WHISPER_LISTEN_ADDR", "0.0.0.0").strip() or "0.0.0.0"
     uvicorn.run(
         "api_server:app",
         host=host,
