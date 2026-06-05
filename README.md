@@ -40,7 +40,7 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 
 - A Linux server (cloud server, VPS, dedicated server or home server)
 - Python 3.9 or higher (the script installs it automatically on supported distros)
-- At least **500 MB RAM** for the default `base` model (see [model table](#available-models))
+- At least **700 MB RAM** for the default `base` model (see [model table](#available-models))
 - Internet access for the initial model download (the model is cached locally afterwards). Not required if using `WHISPER_LOCAL_ONLY` with pre-cached models.
 
 **Note:** For internet-facing deployments, using a [reverse proxy](#using-a-reverse-proxy) to add HTTPS is **strongly recommended**. Set `WHISPER_API_KEY` in `/etc/whisper/whisper.conf` when the server is accessible from the public internet.
@@ -224,7 +224,7 @@ curl http://<server-ip>:9000/v1/audio/transcriptions \
   -F stream=true
 ```
 
-**SSE response** (uses the [OpenAI streaming transcription protocol](https://platform.openai.com/docs/guides/speech-to-text#streaming-transcriptions)):
+**SSE response** (uses the [OpenAI streaming transcription protocol](https://developers.openai.com/api/docs/guides/speech-to-text#streaming)):
 
 ```
 data: {"type":"transcript.text.delta","delta":"Hello, how are you?"}
@@ -323,7 +323,7 @@ POST /v1/audio/translations
 Content-Type: multipart/form-data
 ```
 
-Translates audio in any language to English text. Drop-in replacement for [OpenAI's audio translation endpoint](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Accepts the same parameters as the transcription endpoint (`file`, `model`, `prompt`, `response_format`, `temperature`, `stream`). The output is always in English.
+Translates audio in any language to English text. Drop-in replacement for [OpenAI's audio translation endpoint](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Accepts the same parameters as the transcription endpoint. The output is always in English.
 
 > **Note:** Translation is not supported with English-only (`.en`) models. Use a multilingual model such as `base`, `small`, or `large-v3-turbo`.
 
@@ -361,8 +361,8 @@ http://<server-ip>:9000/docs
 |---|---|---|---|
 | `tiny` | ~75 MB | ~250 MB | Fastest; lower accuracy |
 | `tiny.en` | ~75 MB | ~250 MB | English-only variant |
-| `base` | ~145 MB | ~500 MB | Good balance — **default** |
-| `base.en` | ~145 MB | ~500 MB | English-only variant |
+| `base` | ~145 MB | ~700 MB | Good balance — **default** |
+| `base.en` | ~145 MB | ~700 MB | English-only variant |
 | `small` | ~465 MB | ~1.5 GB | Better accuracy |
 | `small.en` | ~465 MB | ~1.5 GB | English-only variant |
 | `medium` | ~1.5 GB | ~5 GB | High accuracy |
@@ -464,6 +464,27 @@ All variables are optional. If not set, defaults are used automatically.
    sudo systemctl restart whisper
    ```
 
+## Securing your server
+
+If your Whisper server is reachable from the public internet — even briefly — apply at minimum these protections. Whisper is CPU/GPU-intensive, so an unauthenticated endpoint can be abused to burn your compute resources.
+
+**1. Set an API key.** Generate a strong random key and set `WHISPER_API_KEY` in `/etc/whisper/whisper.conf`. All requests must then include `Authorization: Bearer <key>`.
+
+```bash
+# Generate a 32-byte random key
+openssl rand -hex 32
+```
+
+**2. Bind to localhost when fronted by a reverse proxy.** Set `WHISPER_LISTEN_ADDR=127.0.0.1` in `/etc/whisper/whisper.conf` so the unencrypted port is not reachable directly from outside the host. Restart with `sudo systemctl restart whisper`.
+
+**3. Limit upload size at the proxy.** Audio files can be large; configure your reverse proxy to reject oversized uploads (e.g. nginx `client_max_body_size 100M;`). This bounds the disk and memory footprint of a single request.
+
+**4. Mind the log level.** `WHISPER_LOG_LEVEL=DEBUG` may write transcript text to logs. Keep it at `INFO` or higher on shared systems.
+
+**5. Enable CORS at the proxy if calling from a browser.** The server does not set `Access-Control-Allow-Origin` headers by default; add them at your reverse proxy if you intend to call the API directly from a web page on a different origin.
+
+**6. Consider rate limiting.** Place a rate-limit (e.g. nginx `limit_req_zone`, Caddy `rate_limit`) in front of the server to cap concurrent transcriptions per client IP.
+
 ## Using a reverse proxy
 
 For internet-facing deployments, place a reverse proxy in front of Whisper to handle HTTPS termination.
@@ -544,8 +565,6 @@ All install options are optional when using `--auto`. Defaults: model `base`, po
 Copyright (C) 2026 Lin Song   
 This work is licensed under the [MIT License](https://opensource.org/licenses/MIT).
 
-**faster-whisper** is Copyright (c) 2023 SYSTRAN, and is distributed under the [MIT License](https://github.com/SYSTRAN/faster-whisper/blob/master/LICENSE).
-
-**Whisper** is Copyright (c) 2022 OpenAI, and is distributed under the [MIT License](https://github.com/openai/whisper/blob/main/LICENSE).
+**faster-whisper** is Copyright (C) SYSTRAN, and is distributed under the [MIT License](https://github.com/SYSTRAN/faster-whisper/blob/master/LICENSE).
 
 This project is an independent setup for Whisper and is not affiliated with, endorsed by, or sponsored by OpenAI or SYSTRAN.

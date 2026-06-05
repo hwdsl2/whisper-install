@@ -40,7 +40,7 @@
 
 - 一台 Linux 服务器（云服务器、VPS、独立服务器或家用服务器）
 - Python 3.9 或更高版本（脚本会在支持的发行版上自动安装）
-- 默认 `base` 模型至少需要 **500 MB RAM**（参见[模型表](#可用模型)）
+- 默认 `base` 模型至少需要 **700 MB RAM**（参见[模型表](#可用模型)）
 - 初次下载模型需要互联网访问（模型下载后会缓存到本地）。如果使用 `WHISPER_LOCAL_ONLY` 并已预缓存模型，则不需要。
 
 **注：** 对于面向互联网的部署，强烈建议使用[反向代理](#使用反向代理)添加 HTTPS。当服务器可从公网访问时，请在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_API_KEY`。
@@ -224,7 +224,7 @@ curl http://<服务器IP>:9000/v1/audio/transcriptions \
   -F stream=true
 ```
 
-**SSE 响应**（使用 [OpenAI 流式转录协议](https://platform.openai.com/docs/guides/speech-to-text#streaming-transcriptions)）：
+**SSE 响应**（使用 [OpenAI 流式转录协议](https://developers.openai.com/api/docs/guides/speech-to-text#streaming)）：
 
 ```
 data: {"type":"transcript.text.delta","delta":"Hello, how are you?"}
@@ -323,7 +323,7 @@ POST /v1/audio/translations
 Content-Type: multipart/form-data
 ```
 
-将任意语言的音频翻译为英文文本。是 [OpenAI 音频翻译接口](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)的直接替代品。接受与转录接口相同的参数（`file`、`model`、`prompt`、`response_format`、`temperature`、`stream`）。输出始终为英文。
+将任意语言的音频翻译为英文文本。是 [OpenAI 音频翻译接口](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)的直接替代品。接受与转录接口相同的参数。输出始终为英文。
 
 > **注意：** 翻译功能不支持仅限英语的（`.en`）模型。请使用多语言模型，如 `base`、`small` 或 `large-v3-turbo`。
 
@@ -361,8 +361,8 @@ http://<服务器IP>:9000/docs
 |---|---|---|---|
 | `tiny` | ~75 MB | ~250 MB | 最快；准确率较低 |
 | `tiny.en` | ~75 MB | ~250 MB | 仅限英语 |
-| `base` | ~145 MB | ~500 MB | 良好的平衡 —— **默认** |
-| `base.en` | ~145 MB | ~500 MB | 仅限英语 |
+| `base` | ~145 MB | ~700 MB | 良好的平衡 —— **默认** |
+| `base.en` | ~145 MB | ~700 MB | 仅限英语 |
 | `small` | ~465 MB | ~1.5 GB | 更高准确率 |
 | `small.en` | ~465 MB | ~1.5 GB | 仅限英语 |
 | `medium` | ~1.5 GB | ~5 GB | 高准确率 |
@@ -464,6 +464,27 @@ sudo systemctl restart whisper
    sudo systemctl restart whisper
    ```
 
+## 保护你的服务器
+
+如果你的 Whisper 服务器可从公网访问 —— 即使只是短暂可达 —— 也请至少采取以下保护措施。Whisper 对 CPU/GPU 资源消耗较大，未做身份验证的接口可能被滥用，浪费你的计算资源。
+
+**1. 设置 API 密钥。** 生成一个强随机密钥并在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_API_KEY`。之后所有请求必须包含 `Authorization: Bearer <key>`。
+
+```bash
+# 生成 32 字节的随机密钥
+openssl rand -hex 32
+```
+
+**2. 在反向代理后面时绑定到 localhost。** 在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_LISTEN_ADDR=127.0.0.1`，使未加密端口无法从主机外部直接访问。使用 `sudo systemctl restart whisper` 重启。
+
+**3. 在代理处限制上传大小。** 音频文件可能很大；配置反向代理以拒绝超大上传（例如 nginx `client_max_body_size 100M;`），从而限制单个请求占用的磁盘和内存。
+
+**4. 注意日志级别。** `WHISPER_LOG_LEVEL=DEBUG` 可能会将转录文本写入日志。在共享系统上请保持 `INFO` 或更高级别。
+
+**5. 浏览器调用时在代理处启用 CORS。** 本服务器默认不设置 `Access-Control-Allow-Origin` 响应头；若需在不同源的网页中直接调用本 API，请在反向代理处添加 CORS 头。
+
+**6. 考虑限流。** 在服务器前部署限流（如 nginx `limit_req_zone`、Caddy `rate_limit`），限制每个客户端 IP 的并发转录请求数。
+
 ## 使用反向代理
 
 对于面向互联网的部署，在 Whisper 前放置反向代理以处理 HTTPS 终止。
@@ -543,8 +564,6 @@ sudo bash whisper.sh --auto --model base --port 9000
 Copyright (C) 2026 Lin Song   
 本作品依据 [MIT 许可证](https://opensource.org/licenses/MIT)授权。
 
-**faster-whisper** 版权归 SYSTRAN 所有（2023 年），遵循 [MIT 许可证](https://github.com/SYSTRAN/faster-whisper/blob/master/LICENSE)。
-
-**Whisper** 版权归 OpenAI 所有（2022 年），遵循 [MIT 许可证](https://github.com/openai/whisper/blob/main/LICENSE)。
+**faster-whisper** 版权归 SYSTRAN 所有，遵循 [MIT 许可证](https://github.com/SYSTRAN/faster-whisper/blob/master/LICENSE)。
 
 本项目是 Whisper 的独立安装程序，与 OpenAI 或 SYSTRAN 无关联，未获其背书或赞助。
