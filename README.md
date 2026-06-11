@@ -24,9 +24,8 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 
 **Also available:**
 
-- Docker AI/Audio: [Whisper (STT)](https://github.com/hwdsl2/docker-whisper), [Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro), [Embeddings](https://github.com/hwdsl2/docker-embeddings), [LiteLLM](https://github.com/hwdsl2/docker-litellm), [Ollama (LLM)](https://github.com/hwdsl2/docker-ollama), [Docling](https://github.com/hwdsl2/docker-docling)
-- Docker VPN: [WireGuard](https://github.com/hwdsl2/docker-wireguard), [OpenVPN](https://github.com/hwdsl2/docker-openvpn), [IPsec VPN](https://github.com/hwdsl2/docker-ipsec-vpn-server), [Headscale](https://github.com/hwdsl2/docker-headscale)
-- Tools: [MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway)
+- AI stack: [Docker AI Stack](https://github.com/hwdsl2/docker-ai-stack)
+- Docker AI services: [Whisper (STT)](https://github.com/hwdsl2/docker-whisper), [Kokoro (TTS)](https://github.com/hwdsl2/docker-kokoro), [Embeddings](https://github.com/hwdsl2/docker-embeddings), [LiteLLM](https://github.com/hwdsl2/docker-litellm), [Ollama (LLM)](https://github.com/hwdsl2/docker-ollama), [Docling](https://github.com/hwdsl2/docker-docling), [MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway)
 
 **Tip:** Whisper, Kokoro, Embeddings, LiteLLM, Ollama, Docling, and MCP Gateway can be [used together](#using-with-other-ai-services) to build a complete, self-hosted AI stack on your own server. See [Docker AI Stack](https://github.com/hwdsl2/docker-ai-stack) for ready-made configurations and pipeline examples.
 
@@ -35,6 +34,8 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 - 📬 [Subscribe for project updates](https://selfhostedstack.beehiiv.com/subscribe?utm_campaign=ai) (1–2 emails/month) — get free AI and VPN deployment guides (PDF)
 - 💬 Join the [r/selfhostedstack](https://www.reddit.com/r/selfhostedstack/) community for discussions and showcases
 - ⭐ Star the repository if you find it useful — it helps others discover it
+
+Other self-hosted projects: [Setup IPsec VPN](https://github.com/hwdsl2/setup-ipsec-vpn), [IPsec VPN on Docker](https://github.com/hwdsl2/docker-ipsec-vpn-server), [WireGuard](https://github.com/hwdsl2/docker-wireguard), [OpenVPN](https://github.com/hwdsl2/docker-openvpn), [Headscale](https://github.com/hwdsl2/docker-headscale).
 
 ## Requirements
 
