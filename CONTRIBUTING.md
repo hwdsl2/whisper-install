@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve this project. This repository maintains the bare-metal Whisper install script; Docker image changes belong in [docker-whisper](https://github.com/hwdsl2/docker-whisper), and multi-service stack changes belong in [docker-ai-stack](https://github.com/hwdsl2/docker-ai-stack).
+Thanks for helping improve this project. This repository maintains the bare-metal Whisper install script; Docker image changes belong in [docker-whisper](https://github.com/hwdsl2/docker-whisper), and multi-service stack changes belong in [self-hosted-ai-stack](https://github.com/hwdsl2/self-hosted-ai-stack).
 
 ## Before You Start
 
