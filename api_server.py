@@ -165,10 +165,10 @@ def _verify_api_key(authorization: Optional[str] = Header(default=None)) -> None
 
 def _fmt_ts(seconds: float, fmt: str) -> str:
     """Format a float second offset as an SRT or VTT timestamp string."""
-    h  = int(seconds // 3600)
-    m  = int((seconds % 3600) // 60)
-    s  = int(seconds % 60)
-    ms = int(round((seconds - int(seconds)) * 1000))
+    total_ms = max(0, int(round(seconds * 1000)))
+    h, rem = divmod(total_ms, 3600 * 1000)
+    m, rem = divmod(rem, 60 * 1000)
+    s, ms = divmod(rem, 1000)
     sep = "," if fmt == "srt" else "."
     return f"{h:02d}:{m:02d}:{s:02d}{sep}{ms:03d}"
 
