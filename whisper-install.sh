@@ -19,7 +19,7 @@ WHISPER_SVC="/etc/systemd/system/whisper.service"
 WHISPER_TMPDIR="/run/whisper-temp"
 
 WS_API_URL="https://github.com/hwdsl2/vpn-extras/releases/download/v1.0.0/whisper_api_server.py"
-WS_API_SHA256="ca518f30a9be838dca1490ca6fc2fd4d5ed326a9e17fe84f1f89cd1bf832c83f"
+WS_API_SHA256="241b20bb94c9bca7721fce523e55660f734b9a34d2862c1added785195f9c3e6"
 
 check_ip() {
   IP_REGEX='^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
@@ -529,6 +529,10 @@ WHISPER_THREADS=2
 
 # Beam size for decoding (positive integer, higher = more accurate but slower).
 WHISPER_BEAM=5
+
+# Maximum uploaded audio file size in MB. Requests above this limit return HTTP 413.
+# Set to 0 to disable the upload size limit.
+WHISPER_MAX_UPLOAD_MB=1024
 
 # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
 WHISPER_LOG_LEVEL=INFO

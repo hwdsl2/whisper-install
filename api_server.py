@@ -46,6 +46,8 @@ _model = None       # WhisperModel instance
 _model_name = None  # name as loaded (e.g. "base")
 _beam_size = 5      # beam size used for transcription
 _word_timestamps = False  # default for word-level timestamps
+_max_upload_bytes = 1024 * 1024 * 1024  # 1 GiB by default; 0 disables the limit
+_UPLOAD_CHUNK_SIZE = 1024 * 1024
 
 # Serialise all inference calls (batch and streaming) so that CTranslate2 is
 # never called concurrently from multiple threads.
@@ -88,7 +90,7 @@ def _env_float(name: str, default: float) -> float:
 
 def _load_model() -> None:
     """Import and initialise the faster-whisper model from environment config."""
-    global _model, _model_name, _beam_size, _word_timestamps
+    global _model, _model_name, _beam_size, _word_timestamps, _max_upload_bytes
 
     from faster_whisper import WhisperModel  # deferred — keeps import fast
 
@@ -100,10 +102,18 @@ def _load_model() -> None:
     local_files_only = bool(os.environ.get("WHISPER_LOCAL_ONLY", "").strip())
     _beam_size       = _env_int("WHISPER_BEAM", 5)
     _word_timestamps = os.environ.get("WHISPER_WORD_TIMESTAMPS", "").strip().lower() == "true"
+    max_upload_mb    = _env_int("WHISPER_MAX_UPLOAD_MB", 1024)
+    if max_upload_mb < 0:
+        logger.error(
+            "Invalid value for WHISPER_MAX_UPLOAD_MB: %d (expected 0 or greater); using default 1024",
+            max_upload_mb,
+        )
+        max_upload_mb = 1024
+    _max_upload_bytes = max_upload_mb * 1024 * 1024
 
     logger.info(
-        "Loading model '%s' | device=%s compute_type=%s threads=%d beam=%d word_ts=%s local_only=%s cache=%s",
-        model_name, device, compute_type, threads, _beam_size, _word_timestamps, local_files_only, cache_dir,
+        "Loading model '%s' | device=%s compute_type=%s threads=%d beam=%d word_ts=%s max_upload_mb=%d local_only=%s cache=%s",
+        model_name, device, compute_type, threads, _beam_size, _word_timestamps, max_upload_mb, local_files_only, cache_dir,
     )
     t0 = time.monotonic()
     _model = WhisperModel(
@@ -366,15 +376,35 @@ async def _handle_audio(
     else:
         lang = None  # faster-whisper autodetects when None
 
-    # Persist uploaded bytes to a temp file so faster-whisper can open it
+    # Persist uploaded bytes to a temp file so faster-whisper can open it.
     original_name = file.filename or "audio"
     suffix = os.path.splitext(original_name)[1] or ".audio"
     tmp_path: Optional[str] = None
+    upload_size = 0
     try:
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
             tmp_path = tmp.name
-            content = await file.read()
-            tmp.write(content)
+            while True:
+                chunk = await file.read(_UPLOAD_CHUNK_SIZE)
+                if not chunk:
+                    break
+                upload_size += len(chunk)
+                if _max_upload_bytes and upload_size > _max_upload_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            "Uploaded audio is too large. "
+                            f"Maximum allowed size is {_max_upload_bytes // (1024 * 1024)} MB."
+                        ),
+                    )
+                tmp.write(chunk)
+    except HTTPException:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        raise
     except Exception as exc:
         if tmp_path:
             try:
@@ -387,7 +417,7 @@ async def _handle_audio(
     logger.info(
         "%s '%s' (%d bytes) | lang=%s format=%s stream=%s word_ts=%s",
         "Translating" if task == "translate" else "Transcribing",
-        original_name, len(content), lang or "auto", response_format, stream_flag, wt_flag,
+        original_name, upload_size, lang or "auto", response_format, stream_flag, wt_flag,
     )
 
     # ------------------------------------------------------------------
