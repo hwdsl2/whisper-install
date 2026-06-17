@@ -44,7 +44,7 @@ Other self-hosted projects: [Setup IPsec VPN](https://github.com/hwdsl2/setup-ip
 - At least **700 MB RAM** for the default `base` model (see [model table](#available-models))
 - Internet access for the initial model download (the model is cached locally afterwards). Not required if using `WHISPER_LOCAL_ONLY` with pre-cached models.
 
-**Note:** For internet-facing deployments, using a [reverse proxy](#using-a-reverse-proxy) to add HTTPS is **strongly recommended**. Set `WHISPER_API_KEY` in `/etc/whisper/whisper.conf` when the server is accessible from the public internet.
+**Note:** For internet-facing deployments, using a [reverse proxy](#using-a-reverse-proxy) to add HTTPS is **strongly recommended**. When using a reverse proxy, set `WHISPER_LISTEN_ADDR=127.0.0.1` in `/etc/whisper/whisper.conf` to prevent direct access to the unencrypted port. Set `WHISPER_API_KEY` when the server is accessible from the public internet.
 
 ## Installation
 
@@ -444,6 +444,7 @@ All variables are optional. If not set, defaults are used automatically.
 | `WHISPER_COMPUTE_TYPE` | Quantization type. `int8` is recommended for CPU. | `int8` |
 | `WHISPER_THREADS` | CPU threads for inference. Set to the number of physical cores for best latency. | `2` |
 | `WHISPER_BEAM` | Beam size for decoding. Higher values may improve accuracy at the cost of speed. Use `1` for fastest (greedy) decoding. | `5` |
+| `WHISPER_MAX_UPLOAD_MB` | Maximum uploaded audio file size in MB. Requests above this limit return HTTP 413. Set to `0` to disable the limit. | `1024` |
 | `WHISPER_API_KEY` | Optional Bearer token. If set, all API requests must include `Authorization: Bearer <key>`. | *(not set)* |
 | `WHISPER_LOG_LEVEL` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. | `INFO` |
 | `WHISPER_LOCAL_ONLY` | When set to any non-empty value, disables all HuggingFace model downloads. For offline or air-gapped deployments with pre-cached models. | *(not set)* |
@@ -478,7 +479,7 @@ openssl rand -hex 32
 
 **2. Bind to localhost when fronted by a reverse proxy.** Set `WHISPER_LISTEN_ADDR=127.0.0.1` in `/etc/whisper/whisper.conf` so the unencrypted port is not reachable directly from outside the host. Restart with `sudo systemctl restart whisper`.
 
-**3. Limit upload size at the proxy.** Audio files can be large; configure your reverse proxy to reject oversized uploads (e.g. nginx `client_max_body_size 100M;`). This bounds the disk and memory footprint of a single request.
+**3. Limit upload size.** The server rejects uploads above `WHISPER_MAX_UPLOAD_MB` (default `1024`). For internet-facing deployments, also configure your reverse proxy to reject oversized uploads (e.g. nginx `client_max_body_size 100M;`) before they reach the app.
 
 **4. Mind the log level.** `WHISPER_LOG_LEVEL=DEBUG` may write transcript text to logs. Keep it at `INFO` or higher on shared systems.
 

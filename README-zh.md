@@ -44,7 +44,7 @@
 - 默认 `base` 模型至少需要 **700 MB RAM**（参见[模型表](#可用模型)）
 - 初次下载模型需要互联网访问（模型下载后会缓存到本地）。如果使用 `WHISPER_LOCAL_ONLY` 并已预缓存模型，则不需要。
 
-**注：** 对于面向互联网的部署，强烈建议使用[反向代理](#使用反向代理)添加 HTTPS。当服务器可从公网访问时，请在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_API_KEY`。
+**注：** 对于面向互联网的部署，强烈建议使用[反向代理](#使用反向代理)添加 HTTPS。使用反向代理时，请在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_LISTEN_ADDR=127.0.0.1`，以防止未加密端口被直接访问。当服务器可从公网访问时，请设置 `WHISPER_API_KEY`。
 
 ## 安装
 
@@ -444,6 +444,7 @@ sudo systemctl restart whisper
 | `WHISPER_COMPUTE_TYPE` | 量化类型。推荐 CPU 使用 `int8`。 | `int8` |
 | `WHISPER_THREADS` | 推理使用的 CPU 线程数。设置为物理核心数可获得最佳延迟。 | `2` |
 | `WHISPER_BEAM` | 解码的束搜索大小。较大的值可能提高准确率，但会降低速度。使用 `1` 可获得最快的（贪婪）解码。 | `5` |
+| `WHISPER_MAX_UPLOAD_MB` | 上传音频文件的最大大小（MB）。超过此限制的请求会返回 HTTP 413。设为 `0` 可禁用此限制。 | `1024` |
 | `WHISPER_API_KEY` | 可选的 Bearer 令牌。设置后，所有 API 请求必须包含 `Authorization: Bearer <key>`。 | *（未设置）* |
 | `WHISPER_LOG_LEVEL` | 日志级别：`DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`。 | `INFO` |
 | `WHISPER_LOCAL_ONLY` | 设置为任意非空值时，禁用所有 HuggingFace 模型下载。适用于使用预缓存模型的离线或隔离网络部署。 | *（未设置）* |
@@ -478,7 +479,7 @@ openssl rand -hex 32
 
 **2. 在反向代理后面时绑定到 localhost。** 在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_LISTEN_ADDR=127.0.0.1`，使未加密端口无法从主机外部直接访问。使用 `sudo systemctl restart whisper` 重启。
 
-**3. 在代理处限制上传大小。** 音频文件可能很大；配置反向代理以拒绝超大上传（例如 nginx `client_max_body_size 100M;`），从而限制单个请求占用的磁盘和内存。
+**3. 限制上传大小。** 服务器会拒绝超过 `WHISPER_MAX_UPLOAD_MB`（默认 `1024`）的上传。对于面向互联网的部署，还应配置反向代理在请求到达应用前拒绝超大上传（例如 nginx `client_max_body_size 100M;`）。
 
 **4. 注意日志级别。** `WHISPER_LOG_LEVEL=DEBUG` 可能会将转录文本写入日志。在共享系统上请保持 `INFO` 或更高级别。
 
