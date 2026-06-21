@@ -44,7 +44,7 @@
 - Не менее **700 МБ RAM** для модели `base` по умолчанию (см. [таблицу моделей](#доступные-модели))
 - Доступ к интернету для первоначальной загрузки модели (после загрузки модель кэшируется локально). Не требуется при использовании `WHISPER_LOCAL_ONLY` с предварительно загруженными моделями.
 
-**Примечание:** Для развёртываний с доступом из интернета настоятельно рекомендуется использовать [обратный прокси](#использование-обратного-прокси) для добавления HTTPS. При использовании обратного прокси задайте `WHISPER_LISTEN_ADDR=127.0.0.1` в `/etc/whisper/whisper.conf`, чтобы незашифрованный порт не был доступен напрямую. Установите `WHISPER_API_KEY`, если сервер доступен из публичного интернета.
+**Примечание:** Для развёртываний с доступом из интернета настоятельно рекомендуется использовать [обратный прокси](#использование-обратного-прокси) для добавления HTTPS. При использовании обратного прокси задайте `WHISPER_LISTEN_ADDR=127.0.0.1` в `/etc/whisper/whisper.conf`, чтобы незашифрованный порт не был доступен напрямую.
 
 ## Установка
 
@@ -99,6 +99,8 @@ curl -fL -o whisper.sh https://github.com/hwdsl2/whisper-install/raw/main/whispe
 Параметры:
 
   --showinfo                           показать информацию о сервере (модель, endpoint, API docs)
+  --showkey                            показать API-ключ, если он настроен
+  --getkey                             вывести API-ключ (машиночитаемо, без лишнего текста)
   --listmodels                         список доступных моделей Whisper с размерами
   --downloadmodel <модель>             предварительно загрузить модель в каталог кэша
   --uninstall                          удалить Whisper и всю конфигурацию
@@ -125,8 +127,9 @@ curl -fL -o whisper.sh https://github.com/hwdsl2/whisper-install/raw/main/whispe
 2. Создаёт системного пользователя и группу `whisper`
 3. Создаёт виртуальное окружение Python в `/opt/whisper/venv`
 4. Устанавливает `faster-whisper`, `fastapi`, `uvicorn` и `python-multipart`
-5. Записывает конфигурацию в `/etc/whisper/whisper.conf`
-6. Устанавливает и запускает службу systemd `whisper`
+5. Генерирует API-ключ для новых установок
+6. Записывает конфигурацию в `/etc/whisper/whisper.conf`
+7. Устанавливает и запускает службу systemd `whisper`
 
 При первом запуске выбранная модель загружается с HuggingFace. В зависимости от размера модели и скорости сети это может занять несколько минут. Модель кэшируется в `/var/lib/whisper` и повторно используется при последующих запусках.
 
@@ -140,7 +143,10 @@ sudo journalctl -u whisper -n 50
 После появления сообщения «Whisper speech-to-text server is ready» транскрибируйте первый аудиофайл:
 
 ```bash
+API_KEY=$(sudo bash whisper.sh --getkey)
+
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@audio.mp3 -F model=whisper-1
 ```
 
@@ -156,6 +162,7 @@ curl -L -o sample_speech.wav \
     "https://github.com/Azure-Samples/cognitive-services-speech-sdk/raw/master/sampledata/audiofiles/katiesteve.wav"
 
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@sample_speech.wav \
   -F model=whisper-1
 ```
@@ -191,20 +198,16 @@ Content-Type: multipart/form-data
 **Пример:**
 
 ```bash
+API_KEY=$(sudo bash whisper.sh --getkey)
+
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@meeting.m4a \
   -F model=whisper-1 \
   -F language=ru
 ```
 
-С аутентификацией по API-ключу:
-
-```bash
-curl http://<ip-сервера>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer your-api-key" \
-  -F file=@audio.mp3 \
-  -F model=whisper-1
-```
+Если аутентификация по API-ключу отключена, не указывайте заголовок `Authorization`.
 
 ### Форматы ответа
 
@@ -220,6 +223,7 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@long-audio.mp3 \
   -F model=whisper-1 \
   -F stream=true
@@ -249,7 +253,9 @@ form.append("model", "whisper-1");
 form.append("stream", "true");
 
 const res = await fetch("http://<ip-сервера>:9000/v1/audio/transcriptions", {
-  method: "POST", body: form,
+  method: "POST",
+  headers: { Authorization: `Bearer ${apiKey}` },
+  body: form,
 });
 
 const reader = res.body.getReader();
@@ -280,6 +286,7 @@ while (true) {
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@video.mp4 \
   -F model=whisper-1 \
   -F response_format=srt
@@ -289,6 +296,7 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json
@@ -298,6 +306,7 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json \
@@ -332,6 +341,7 @@ Content-Type: multipart/form-data
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/translations \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@french-audio.mp3 \
   -F model=whisper-1
 ```
@@ -345,7 +355,8 @@ GET /v1/models
 Возвращает активную модель в формате, совместимом с OpenAI.
 
 ```bash
-curl http://<ip-сервера>:9000/v1/models
+curl http://<ip-сервера>:9000/v1/models \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ### Интерактивная документация API
@@ -388,6 +399,18 @@ http://<ip-сервера>:9000/docs
 
 ```bash
 sudo bash whisper.sh --showinfo
+```
+
+**Показать API-ключ:**
+
+```bash
+sudo bash whisper.sh --showkey
+```
+
+Для скриптов выведите только исходный ключ:
+
+```bash
+sudo bash whisper.sh --getkey
 ```
 
 **Список доступных моделей:**
@@ -445,7 +468,7 @@ sudo systemctl restart whisper
 | `WHISPER_THREADS` | Потоки CPU для инференса. Установите равным числу физических ядер для минимальной задержки. | `2` |
 | `WHISPER_BEAM` | Размер луча для декодирования. Большие значения могут повысить точность за счёт скорости. Используйте `1` для наиболее быстрого (жадного) декодирования. | `5` |
 | `WHISPER_MAX_UPLOAD_MB` | Максимальный размер загружаемого аудиофайла в МБ. Запросы сверх этого лимита возвращают HTTP 413. Установите `0`, чтобы отключить лимит. | `1024` |
-| `WHISPER_API_KEY` | Необязательный Bearer-токен. Если задан, все API-запросы должны содержать `Authorization: Bearer <key>`. | *(не задано)* |
+| `WHISPER_API_KEY` | Необязательный Bearer-токен. Для новых установок генерируется автоматически. Если задан, все API-запросы должны содержать `Authorization: Bearer <key>`. Явно задайте пустое значение, чтобы отключить аутентификацию. | Генерируется автоматически для новых установок |
 | `WHISPER_LOG_LEVEL` | Уровень логирования: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. | `INFO` |
 | `WHISPER_LOCAL_ONLY` | При установке любого непустого значения отключает все загрузки моделей с HuggingFace. Для офлайн или изолированных развёртываний с предварительно загруженными моделями. | *(не задано)* |
 | `WHISPER_WORD_TIMESTAMPS` | При значении `true` глобально включает временны́е метки на уровне слов для всех запросов. Вывод `verbose_json` будет содержать массив `words` верхнего уровня с временны́ми метками и оценками уверенности для каждого слова. Также можно включить для отдельного запроса через `timestamp_granularities[]=word`. | *(не задано)* |
@@ -470,7 +493,7 @@ sudo systemctl restart whisper
 
 Если ваш сервер Whisper доступен из публичной сети — даже кратковременно — примените как минимум следующие меры защиты. Whisper требует значительных ресурсов CPU/GPU, поэтому неаутентифицированная конечная точка может быть использована для расходования ваших вычислительных ресурсов.
 
-**1. Установите API-ключ.** Сгенерируйте надёжный случайный ключ и задайте `WHISPER_API_KEY` в `/etc/whisper/whisper.conf`. После этого все запросы должны содержать `Authorization: Bearer <ключ>`.
+**1. Используйте API-ключ.** Для новых установок API-ключ генерируется автоматически. Покажите его командой `sudo bash whisper.sh --showkey` или используйте `sudo bash whisper.sh --getkey` в скриптах. Существующие файлы конфигурации не изменяются автоматически; если в существующей установке нет ключа, задайте `WHISPER_API_KEY` в `/etc/whisper/whisper.conf`, чтобы включить аутентификацию вручную. Все аутентифицированные запросы должны содержать `Authorization: Bearer <key>`.
 
 ```bash
 # Сгенерировать 32-байтовый случайный ключ
@@ -523,8 +546,6 @@ server {
     }
 }
 ```
-
-Установите `WHISPER_API_KEY` в `/etc/whisper/whisper.conf`, если сервер доступен из публичного интернета.
 
 ## Использование с другими AI-сервисами
 

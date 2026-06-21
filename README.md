@@ -44,7 +44,7 @@ Other self-hosted projects: [Setup IPsec VPN](https://github.com/hwdsl2/setup-ip
 - At least **700 MB RAM** for the default `base` model (see [model table](#available-models))
 - Internet access for the initial model download (the model is cached locally afterwards). Not required if using `WHISPER_LOCAL_ONLY` with pre-cached models.
 
-**Note:** For internet-facing deployments, using a [reverse proxy](#using-a-reverse-proxy) to add HTTPS is **strongly recommended**. When using a reverse proxy, set `WHISPER_LISTEN_ADDR=127.0.0.1` in `/etc/whisper/whisper.conf` to prevent direct access to the unencrypted port. Set `WHISPER_API_KEY` when the server is accessible from the public internet.
+**Note:** For internet-facing deployments, using a [reverse proxy](#using-a-reverse-proxy) to add HTTPS is **strongly recommended**. When using a reverse proxy, set `WHISPER_LISTEN_ADDR=127.0.0.1` in `/etc/whisper/whisper.conf` to prevent direct access to the unencrypted port.
 
 ## Installation
 
@@ -99,6 +99,8 @@ Usage: bash whisper.sh [options]
 Options:
 
   --showinfo                           show server info (model, endpoint, API docs)
+  --showkey                            show the API key, if configured
+  --getkey                             output the API key (machine-readable, no decoration)
   --listmodels                         list available Whisper model names and sizes
   --downloadmodel <model>              pre-download a model to the cache directory
   --uninstall                          remove Whisper and delete all configuration
@@ -125,8 +127,9 @@ On first run, the script:
 2. Creates a `whisper` system user and group
 3. Creates a Python virtual environment at `/opt/whisper/venv`
 4. Installs `faster-whisper`, `fastapi`, `uvicorn`, and `python-multipart`
-5. Writes the configuration to `/etc/whisper/whisper.conf`
-6. Installs and starts the `whisper` systemd service
+5. Generates an API key for fresh installs
+6. Writes the configuration to `/etc/whisper/whisper.conf`
+7. Installs and starts the `whisper` systemd service
 
 The first start will download the selected model from HuggingFace. This can take several minutes depending on the model size and network speed. The model is cached in `/var/lib/whisper` and reused on subsequent starts.
 
@@ -140,7 +143,10 @@ sudo journalctl -u whisper -n 50
 Once you see "Whisper speech-to-text server is ready", transcribe your first audio file:
 
 ```bash
+API_KEY=$(sudo bash whisper.sh --getkey)
+
 curl http://<server-ip>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@audio.mp3 -F model=whisper-1
 ```
 
@@ -156,6 +162,7 @@ curl -L -o sample_speech.wav \
     "https://github.com/Azure-Samples/cognitive-services-speech-sdk/raw/master/sampledata/audiofiles/katiesteve.wav"
 
 curl http://<server-ip>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@sample_speech.wav \
   -F model=whisper-1
 ```
@@ -191,20 +198,16 @@ Content-Type: multipart/form-data
 **Example:**
 
 ```bash
+API_KEY=$(sudo bash whisper.sh --getkey)
+
 curl http://<server-ip>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@meeting.m4a \
   -F model=whisper-1 \
   -F language=en
 ```
 
-With API key authentication:
-
-```bash
-curl http://<server-ip>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer your-api-key" \
-  -F file=@audio.mp3 \
-  -F model=whisper-1
-```
+If API key authentication is disabled, omit the `Authorization` header.
 
 ### Response formats
 
@@ -220,6 +223,7 @@ curl http://<server-ip>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<server-ip>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@long-audio.mp3 \
   -F model=whisper-1 \
   -F stream=true
@@ -249,7 +253,9 @@ form.append("model", "whisper-1");
 form.append("stream", "true");
 
 const res = await fetch("http://<server-ip>:9000/v1/audio/transcriptions", {
-  method: "POST", body: form,
+  method: "POST",
+  headers: { Authorization: `Bearer ${apiKey}` },
+  body: form,
 });
 
 const reader = res.body.getReader();
@@ -280,6 +286,7 @@ while (true) {
 
 ```bash
 curl http://<server-ip>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@video.mp4 \
   -F model=whisper-1 \
   -F response_format=srt
@@ -289,6 +296,7 @@ curl http://<server-ip>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<server-ip>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json
@@ -298,6 +306,7 @@ curl http://<server-ip>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<server-ip>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json \
@@ -332,6 +341,7 @@ Translates audio in any language to English text. Drop-in replacement for [OpenA
 
 ```bash
 curl http://<server-ip>:9000/v1/audio/translations \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@french-audio.mp3 \
   -F model=whisper-1
 ```
@@ -345,7 +355,8 @@ GET /v1/models
 Returns the active model in OpenAI-compatible format.
 
 ```bash
-curl http://<server-ip>:9000/v1/models
+curl http://<server-ip>:9000/v1/models \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ### Interactive API docs
@@ -388,6 +399,18 @@ After setup, run the script again to manage your server.
 
 ```bash
 sudo bash whisper.sh --showinfo
+```
+
+**Show API key:**
+
+```bash
+sudo bash whisper.sh --showkey
+```
+
+For scripts, output only the raw key:
+
+```bash
+sudo bash whisper.sh --getkey
 ```
 
 **List available models:**
@@ -445,7 +468,7 @@ All variables are optional. If not set, defaults are used automatically.
 | `WHISPER_THREADS` | CPU threads for inference. Set to the number of physical cores for best latency. | `2` |
 | `WHISPER_BEAM` | Beam size for decoding. Higher values may improve accuracy at the cost of speed. Use `1` for fastest (greedy) decoding. | `5` |
 | `WHISPER_MAX_UPLOAD_MB` | Maximum uploaded audio file size in MB. Requests above this limit return HTTP 413. Set to `0` to disable the limit. | `1024` |
-| `WHISPER_API_KEY` | Optional Bearer token. If set, all API requests must include `Authorization: Bearer <key>`. | *(not set)* |
+| `WHISPER_API_KEY` | Optional Bearer token. Fresh installs auto-generate one. If set, all API requests must include `Authorization: Bearer <key>`. Set explicitly empty to disable authentication. | Auto-generated for fresh installs |
 | `WHISPER_LOG_LEVEL` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. | `INFO` |
 | `WHISPER_LOCAL_ONLY` | When set to any non-empty value, disables all HuggingFace model downloads. For offline or air-gapped deployments with pre-cached models. | *(not set)* |
 | `WHISPER_WORD_TIMESTAMPS` | When set to `true`, enables word-level timestamps globally for all requests. The `verbose_json` output will include a top-level `words` array with per-word timing and confidence. Can also be enabled per-request via `timestamp_granularities[]=word`. | *(not set)* |
@@ -470,7 +493,7 @@ All variables are optional. If not set, defaults are used automatically.
 
 If your Whisper server is reachable from the public internet — even briefly — apply at minimum these protections. Whisper is CPU/GPU-intensive, so an unauthenticated endpoint can be abused to burn your compute resources.
 
-**1. Set an API key.** Generate a strong random key and set `WHISPER_API_KEY` in `/etc/whisper/whisper.conf`. All requests must then include `Authorization: Bearer <key>`.
+**1. Use an API key.** Fresh installs auto-generate an API key. Display it with `sudo bash whisper.sh --showkey`, or use `sudo bash whisper.sh --getkey` in scripts. Existing configuration files are not modified; if an existing install has no key, set `WHISPER_API_KEY` in `/etc/whisper/whisper.conf` to enable authentication manually. All authenticated requests must include `Authorization: Bearer <key>`.
 
 ```bash
 # Generate a 32-byte random key
@@ -523,8 +546,6 @@ server {
     }
 }
 ```
-
-Set `WHISPER_API_KEY` in `/etc/whisper/whisper.conf` when the server is accessible from the public internet.
 
 ## Using with other AI services
 

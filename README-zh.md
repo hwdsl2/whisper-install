@@ -44,7 +44,7 @@
 - 默认 `base` 模型至少需要 **700 MB RAM**（参见[模型表](#可用模型)）
 - 初次下载模型需要互联网访问（模型下载后会缓存到本地）。如果使用 `WHISPER_LOCAL_ONLY` 并已预缓存模型，则不需要。
 
-**注：** 对于面向互联网的部署，强烈建议使用[反向代理](#使用反向代理)添加 HTTPS。使用反向代理时，请在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_LISTEN_ADDR=127.0.0.1`，以防止未加密端口被直接访问。当服务器可从公网访问时，请设置 `WHISPER_API_KEY`。
+**注：** 对于面向互联网的部署，强烈建议使用[反向代理](#使用反向代理)添加 HTTPS。使用反向代理时，请在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_LISTEN_ADDR=127.0.0.1`，以防止未加密端口被直接访问。
 
 ## 安装
 
@@ -99,6 +99,8 @@ curl -fL -o whisper.sh https://github.com/hwdsl2/whisper-install/raw/main/whispe
 选项：
 
   --showinfo                           显示服务器信息（模型、接口、API 文档）
+  --showkey                            显示 API 密钥（如果已配置）
+  --getkey                             输出 API 密钥（机器可读，无额外文本）
   --listmodels                         列出可用的 Whisper 模型名称和大小
   --downloadmodel <模型>               预下载模型到缓存目录
   --uninstall                          删除 Whisper 及所有配置
@@ -125,8 +127,9 @@ curl -fL -o whisper.sh https://github.com/hwdsl2/whisper-install/raw/main/whispe
 2. 创建 `whisper` 系统用户和组
 3. 在 `/opt/whisper/venv` 创建 Python 虚拟环境
 4. 安装 `faster-whisper`、`fastapi`、`uvicorn` 和 `python-multipart`
-5. 将配置写入 `/etc/whisper/whisper.conf`
-6. 安装并启动 `whisper` systemd 服务
+5. 为全新安装生成 API 密钥
+6. 将配置写入 `/etc/whisper/whisper.conf`
+7. 安装并启动 `whisper` systemd 服务
 
 首次启动将从 HuggingFace 下载所选模型。根据模型大小和网络速度，这可能需要几分钟。模型缓存在 `/var/lib/whisper` 中，后续启动时将复用。
 
@@ -140,7 +143,10 @@ sudo journalctl -u whisper -n 50
 看到"Whisper speech-to-text server is ready"后，转录你的第一个音频文件：
 
 ```bash
+API_KEY=$(sudo bash whisper.sh --getkey)
+
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@audio.mp3 -F model=whisper-1
 ```
 
@@ -156,6 +162,7 @@ curl -L -o sample_speech.wav \
     "https://github.com/Azure-Samples/cognitive-services-speech-sdk/raw/master/sampledata/audiofiles/katiesteve.wav"
 
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@sample_speech.wav \
   -F model=whisper-1
 ```
@@ -191,20 +198,16 @@ Content-Type: multipart/form-data
 **示例：**
 
 ```bash
+API_KEY=$(sudo bash whisper.sh --getkey)
+
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@meeting.m4a \
   -F model=whisper-1 \
   -F language=zh
 ```
 
-使用 API 密钥认证：
-
-```bash
-curl http://<服务器IP>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer your-api-key" \
-  -F file=@audio.mp3 \
-  -F model=whisper-1
-```
+如果已禁用 API 密钥认证，请省略 `Authorization` 请求头。
 
 ### 响应格式
 
@@ -220,6 +223,7 @@ curl http://<服务器IP>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@long-audio.mp3 \
   -F model=whisper-1 \
   -F stream=true
@@ -249,7 +253,9 @@ form.append("model", "whisper-1");
 form.append("stream", "true");
 
 const res = await fetch("http://<服务器IP>:9000/v1/audio/transcriptions", {
-  method: "POST", body: form,
+  method: "POST",
+  headers: { Authorization: `Bearer ${apiKey}` },
+  body: form,
 });
 
 const reader = res.body.getReader();
@@ -280,6 +286,7 @@ while (true) {
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@video.mp4 \
   -F model=whisper-1 \
   -F response_format=srt
@@ -289,6 +296,7 @@ curl http://<服务器IP>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json
@@ -298,6 +306,7 @@ curl http://<服务器IP>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json \
@@ -332,6 +341,7 @@ Content-Type: multipart/form-data
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/translations \
+  -H "Authorization: Bearer $API_KEY" \
   -F file=@french-audio.mp3 \
   -F model=whisper-1
 ```
@@ -345,7 +355,8 @@ GET /v1/models
 以兼容 OpenAI 的格式返回当前活跃模型。
 
 ```bash
-curl http://<服务器IP>:9000/v1/models
+curl http://<服务器IP>:9000/v1/models \
+  -H "Authorization: Bearer $API_KEY"
 ```
 
 ### 交互式 API 文档
@@ -388,6 +399,18 @@ http://<服务器IP>:9000/docs
 
 ```bash
 sudo bash whisper.sh --showinfo
+```
+
+**显示 API 密钥：**
+
+```bash
+sudo bash whisper.sh --showkey
+```
+
+用于脚本时，只输出原始密钥：
+
+```bash
+sudo bash whisper.sh --getkey
 ```
 
 **列出可用模型：**
@@ -445,7 +468,7 @@ sudo systemctl restart whisper
 | `WHISPER_THREADS` | 推理使用的 CPU 线程数。设置为物理核心数可获得最佳延迟。 | `2` |
 | `WHISPER_BEAM` | 解码的束搜索大小。较大的值可能提高准确率，但会降低速度。使用 `1` 可获得最快的（贪婪）解码。 | `5` |
 | `WHISPER_MAX_UPLOAD_MB` | 上传音频文件的最大大小（MB）。超过此限制的请求会返回 HTTP 413。设为 `0` 可禁用此限制。 | `1024` |
-| `WHISPER_API_KEY` | 可选的 Bearer 令牌。设置后，所有 API 请求必须包含 `Authorization: Bearer <key>`。 | *（未设置）* |
+| `WHISPER_API_KEY` | 可选的 Bearer 令牌。全新安装会自动生成。设置后，所有 API 请求必须包含 `Authorization: Bearer <key>`。显式设为空可禁用身份验证。 | 全新安装自动生成 |
 | `WHISPER_LOG_LEVEL` | 日志级别：`DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`。 | `INFO` |
 | `WHISPER_LOCAL_ONLY` | 设置为任意非空值时，禁用所有 HuggingFace 模型下载。适用于使用预缓存模型的离线或隔离网络部署。 | *（未设置）* |
 | `WHISPER_WORD_TIMESTAMPS` | 设置为 `true` 时，为所有请求全局启用逐词时间戳。`verbose_json` 输出将包含带有逐词时间和置信度的顶层 `words` 数组。也可通过 `timestamp_granularities[]=word` 按请求启用。 | *（未设置）* |
@@ -470,7 +493,7 @@ sudo systemctl restart whisper
 
 如果你的 Whisper 服务器可从公网访问 —— 即使只是短暂可达 —— 也请至少采取以下保护措施。Whisper 对 CPU/GPU 资源消耗较大，未做身份验证的接口可能被滥用，浪费你的计算资源。
 
-**1. 设置 API 密钥。** 生成一个强随机密钥并在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_API_KEY`。之后所有请求必须包含 `Authorization: Bearer <key>`。
+**1. 使用 API 密钥。** 全新安装会自动生成 API 密钥。可用 `sudo bash whisper.sh --showkey` 显示，或在脚本中使用 `sudo bash whisper.sh --getkey`。既有配置文件不会被自动修改；如果既有安装没有密钥，请在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_API_KEY` 以手动启用身份验证。所有已启用认证的请求都必须包含 `Authorization: Bearer <key>`。
 
 ```bash
 # 生成 32 字节的随机密钥
@@ -523,8 +546,6 @@ server {
     }
 }
 ```
-
-当服务器可从公网访问时，请在 `/etc/whisper/whisper.conf` 中设置 `WHISPER_API_KEY`。
 
 ## 与其他 AI 服务配合使用
 
