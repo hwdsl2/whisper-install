@@ -23,6 +23,19 @@ jobs:
 
           cp -f whisper-install.sh ./whisper.sh
 
+          wait_for_whisper() {
+            local port="$1"
+            local i=0
+            while [ "$i" -lt 300 ]; do
+              if curl -sf "http://127.0.0.1:${port}/health" >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 1
+              i=$((i + 1))
+            done
+            return 1
+          }
+
           sudo bash whisper.sh --auto
 
           sudo systemctl status whisper.service
@@ -32,6 +45,16 @@ jobs:
           sudo grep -q 'WHISPER_MODEL=base' /etc/whisper/whisper.conf
           sudo grep -q 'WHISPER_PORT=9000' /etc/whisper/whisper.conf
           sudo grep -q 'WHISPER_LISTEN_ADDR=0.0.0.0' /etc/whisper/whisper.conf
+          sudo grep -q '^WHISPER_API_KEY=whisper-' /etc/whisper/whisper.conf
+          whisper_key=$(sudo bash whisper.sh --getkey)
+          [ -n "$whisper_key" ] || { echo "Generated Whisper API key not found"; exit 1; }
+          sudo bash whisper.sh --showkey | grep -q "$whisper_key"
+          sudo sed -i 's/^WHISPER_API_KEY=.*/WHISPER_API_KEY=/' /etc/whisper/whisper.conf
+          if sudo bash whisper.sh --getkey; then
+            echo "Expected no Whisper API key after blanking WHISPER_API_KEY"
+            exit 1
+          fi
+          sudo sed -i "s/^WHISPER_API_KEY=.*/WHISPER_API_KEY=$whisper_key/" /etc/whisper/whisper.conf
 
           sudo bash whisper.sh --showinfo
           sudo bash whisper.sh --listmodels
@@ -39,20 +62,19 @@ jobs:
           sudo bash whisper.sh --listmodels | grep -q 'large-v3-turbo'
 
           # Wait for server to be ready (up to 300 seconds for model download)
-          i=0
-          while [ "$i" -lt 300 ]; do
-            if curl -sf http://127.0.0.1:9000/health >/dev/null 2>&1; then
-              break
-            fi
-            sleep 1
-            i=$((i + 1))
-          done
+          wait_for_whisper 9000
 
           # Verify health endpoint
           curl -sf http://127.0.0.1:9000/health
 
+          # Test auth enforcement when WHISPER_API_KEY is generated
+          http_code=$(curl -s -o /dev/null -w '%{http_code}' \
+            http://127.0.0.1:9000/v1/models 2>/dev/null || true)
+          [ "$http_code" = "401" ] || { echo "Expected 401 without key, got $http_code"; exit 1; }
+          whisper_curl_args=(-H "Authorization: Bearer $whisper_key")
+
           # Verify models endpoint
-          curl -sf http://127.0.0.1:9000/v1/models | grep -q '"object"'
+          curl -sf "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/models | grep -q '"object"'
 
           # Generate a minimal test audio file
           if [ ! -x /usr/bin/ffmpeg ]; then
@@ -63,34 +85,34 @@ jobs:
           ffmpeg -y -f lavfi -i "sine=frequency=440:duration=1" -ar 16000 -ac 1 /tmp/test.wav
 
           # Test transcription endpoint (json format)
-          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+          curl -sf "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/audio/transcriptions \
             -F file=@/tmp/test.wav -F model=whisper-1 \
             | grep -q '"text"'
 
           # Test transcription endpoint (text format)
-          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+          curl -sf "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/audio/transcriptions \
             -F file=@/tmp/test.wav -F model=whisper-1 -F response_format=text
 
           # Test transcription endpoint (verbose_json format)
-          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+          curl -sf "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/audio/transcriptions \
             -F file=@/tmp/test.wav -F model=whisper-1 -F response_format=verbose_json \
             | grep -q '"segments"'
 
           # Test transcription endpoint (srt format)
-          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+          curl -sf "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/audio/transcriptions \
             -F file=@/tmp/test.wav -F model=whisper-1 -F response_format=srt
 
           # Test transcription endpoint (vtt format)
-          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+          curl -sf "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/audio/transcriptions \
             -F file=@/tmp/test.wav -F model=whisper-1 -F response_format=vtt
 
           # Test transcription endpoint with explicit language
-          curl -sf http://127.0.0.1:9000/v1/audio/transcriptions \
+          curl -sf "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/audio/transcriptions \
             -F file=@/tmp/test.wav -F model=whisper-1 -F language=en \
             | grep -q '"text"'
 
           # Test streaming transcription endpoint (stream=true, SSE)
-          stream_output=$(curl -sN http://127.0.0.1:9000/v1/audio/transcriptions \
+          stream_output=$(curl -sN "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/audio/transcriptions \
             -F file=@/tmp/test.wav -F model=whisper-1 -F stream=true)
           echo "$stream_output" | grep -q '"transcript.text.done"'
           echo "$stream_output" | grep -q '\[DONE\]'
@@ -107,6 +129,7 @@ jobs:
           sudo systemctl status whisper.service
           sudo grep -q 'WHISPER_MODEL=tiny' /etc/whisper/whisper.conf
           sudo grep -q 'WHISPER_PORT=9001' /etc/whisper/whisper.conf
+          sudo bash whisper.sh --getkey | grep -q '^whisper-'
 
           sudo bash whisper.sh --uninstall --yes
 
@@ -117,9 +140,40 @@ jobs:
 
           sudo systemctl status whisper.service
           sudo grep -q 'WHISPER_LISTEN_ADDR=127.0.0.1' /etc/whisper/whisper.conf
+          sudo bash whisper.sh --getkey | grep -q '^whisper-'
 
           sudo bash whisper.sh --uninstall --yes
 
           sudo test -f /etc/whisper/whisper.conf && exit 1
+
+          # Explicit empty key preserves no-auth behavior.
+          sudo rm -rf /var/lib/whisper
+          sudo env WHISPER_API_KEY= bash whisper.sh --auto --model tiny --port 9002
+          sudo grep -q '^WHISPER_API_KEY=$' /etc/whisper/whisper.conf
+          if sudo bash whisper.sh --getkey; then
+            echo "Expected no Whisper API key for explicit empty key install"
+            exit 1
+          fi
+          wait_for_whisper 9002
+          curl -sf http://127.0.0.1:9002/v1/models | grep -q '"object"'
+
+          sudo bash whisper.sh --uninstall --yes
+
+          # Preserved model cache still gets a key on a new install.
+          sudo rm -rf /var/lib/whisper
+          sudo mkdir -p /var/lib/whisper
+          printf '%s' 'existing' | sudo tee /var/lib/whisper/.model >/dev/null
+          sudo bash whisper.sh --auto --model tiny --port 9003
+          sudo grep -q '^WHISPER_API_KEY=whisper-' /etc/whisper/whisper.conf
+          whisper_key=$(sudo bash whisper.sh --getkey)
+          [ -n "$whisper_key" ] || { echo "Generated Whisper API key not found"; exit 1; }
+          wait_for_whisper 9003
+          http_code=$(curl -s -o /dev/null -w '%{http_code}' \
+            http://127.0.0.1:9003/v1/models 2>/dev/null || true)
+          [ "$http_code" = "401" ] || { echo "Expected 401 without key, got $http_code"; exit 1; }
+          curl -sf -H "Authorization: Bearer $whisper_key" \
+            http://127.0.0.1:9003/v1/models | grep -q '"object"'
+
+          sudo bash whisper.sh --uninstall --yes
 
           exit 0

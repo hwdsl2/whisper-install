@@ -54,6 +54,10 @@ jobs:
           grep -q 'WHISPER_MODEL=base' /etc/whisper/whisper.conf
           grep -q 'WHISPER_PORT=9000' /etc/whisper/whisper.conf
           grep -q 'WHISPER_LISTEN_ADDR=0.0.0.0' /etc/whisper/whisper.conf
+          grep -q '^WHISPER_API_KEY=whisper-' /etc/whisper/whisper.conf
+          whisper_key=$(bash whisper.sh --getkey)
+          [ -n "$whisper_key" ] || { echo "Generated Whisper API key not found"; exit 1; }
+          bash whisper.sh --showkey | grep -q "$whisper_key"
 
           bash whisper.sh --showinfo
           bash whisper.sh --listmodels
@@ -72,6 +76,7 @@ jobs:
           systemctl status whisper.service
           grep -q 'WHISPER_MODEL=tiny' /etc/whisper/whisper.conf
           grep -q 'WHISPER_PORT=9001' /etc/whisper/whisper.conf
+          bash whisper.sh --getkey | grep -q '^whisper-'
 
           bash whisper.sh --uninstall --yes
 
@@ -82,6 +87,7 @@ jobs:
 
           systemctl status whisper.service
           grep -q 'WHISPER_LISTEN_ADDR=127.0.0.1' /etc/whisper/whisper.conf
+          bash whisper.sh --getkey | grep -q '^whisper-'
 
           bash whisper.sh --uninstall --yes
 
