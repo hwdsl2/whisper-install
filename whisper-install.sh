@@ -154,6 +154,14 @@ parse_args() {
       show_info=1
       shift
       ;;
+    --showkey)
+      show_key=1
+      shift
+      ;;
+    --getkey)
+      get_key=1
+      shift
+      ;;
     --listmodels)
       list_models=1
       shift
@@ -184,7 +192,7 @@ parse_args() {
 
 check_args() {
   local mgmt_count
-  mgmt_count=$((show_info + list_models + download_model))
+  mgmt_count=$((show_info + show_key + get_key + list_models + download_model))
 
   if [ "$auto" != 0 ] && [ -f "$WHISPER_CONF" ]; then
     show_usage "Invalid parameter '--auto'. Whisper is already set up on this server."
@@ -199,6 +207,8 @@ check_args() {
   fi
   if [ ! -f "$WHISPER_CONF" ]; then
     [ "$show_info" = 1 ]      && exiterr "You must first set up Whisper before showing info."
+    [ "$show_key" = 1 ]       && exiterr "You must first set up Whisper before showing the API key."
+    [ "$get_key" = 1 ]        && exit 1
     [ "$download_model" = 1 ] && exiterr "You must first set up Whisper before downloading a model."
   fi
   if [ "$mgmt_count" -gt 1 ]; then
@@ -273,6 +283,8 @@ Usage: bash $0 [options]
 Options:
 
   --showinfo                           show server info (model, endpoint, API docs)
+  --showkey                            show the API key, if configured
+  --getkey                             output the API key (machine-readable, no decoration)
   --listmodels                         list available Whisper model names and sizes
   --downloadmodel <model>              pre-download a model to the cache directory
   --uninstall                          remove Whisper and delete all configuration
@@ -462,6 +474,29 @@ create_directories() {
   chmod 1777 "$WHISPER_TMPDIR"
 }
 
+generate_api_key() {
+  printf 'whisper-%s' "$(head -c 48 /dev/urandom | od -A n -t x1 | tr -d ' \n' | head -c 64)"
+}
+
+validate_api_key_value() {
+  if ! printf '%s' "$1" | grep -Eq '^[A-Za-z0-9._~+=:@/-]+$'; then
+    exiterr "WHISPER_API_KEY may contain only letters, numbers, and these characters: . _ ~ + = : @ / -"
+  fi
+}
+
+configure_api_key() {
+  local api_key_was_set="${WHISPER_API_KEY+x}"
+  whisper_api_key=""
+
+  if [ -n "${WHISPER_API_KEY:-}" ]; then
+    validate_api_key_value "$WHISPER_API_KEY"
+    whisper_api_key="$WHISPER_API_KEY"
+  elif [ -z "$api_key_was_set" ]; then
+    whisper_api_key=$(generate_api_key)
+  fi
+
+}
+
 create_venv() {
   echo "  Creating Python virtual environment..."
   if ! check_python; then
@@ -538,8 +573,8 @@ WHISPER_MAX_UPLOAD_MB=1024
 WHISPER_LOG_LEVEL=INFO
 
 # Optional API key for bearer token authentication.
-# Leave blank to allow unauthenticated access.
-WHISPER_API_KEY=
+# Fresh installs auto-generate one. Leave blank to allow unauthenticated access.
+WHISPER_API_KEY=${whisper_api_key}
 
 # Set to any non-empty value to disable model downloads (air-gap / offline mode).
 # The model must already be present in ${WHISPER_DATA}.
@@ -628,11 +663,21 @@ finish_setup() {
   echo "==========================================================="
   echo " Model:    $whisper_model"
   echo " Endpoint: http://${server_ip}:${port}"
+  if [ -n "$whisper_api_key" ]; then
+    echo " API key:  sudo bash $0 --showkey"
+  fi
   echo "==========================================================="
   echo
   echo "Transcribe an audio file:"
   echo "  curl http://${server_ip}:${port}/v1/audio/transcriptions \\"
+  if [ -n "$whisper_api_key" ]; then
+    echo "    -H \"Authorization: Bearer <api-key>\" \\"
+  fi
   echo "    -F file=@audio.mp3 -F model=whisper-1"
+  if [ -n "$whisper_api_key" ]; then
+    echo
+    echo "Use 'sudo bash $0 --getkey' to print the API key for scripts."
+  fi
   echo
   echo "Interactive API docs: http://${server_ip}:${port}/docs"
   echo
@@ -648,13 +693,69 @@ finish_setup() {
 # Management actions
 # ---------------------------------------------------------------------------
 
+get_config_value() {
+  local key="$1"
+  [ -f "$WHISPER_CONF" ] || return 0
+  awk -F= -v key="$key" '
+    $1 == key {
+      sub(/^[^=]*=/, "")
+      sub(/[[:space:]]*#.*/, "")
+      print
+      exit
+    }
+  ' "$WHISPER_CONF"
+}
+
 load_config_from_file() {
-  if [ -f "$WHISPER_CONF" ]; then
-    # shellcheck disable=SC1090
-    . <(grep -E '^(WHISPER_MODEL|WHISPER_PORT)=' "$WHISPER_CONF" | sed 's/[[:space:]]*#.*$//')
-  fi
+  WHISPER_MODEL=""
+  WHISPER_PORT=""
+  WHISPER_API_KEY=""
+  WHISPER_AUTH_ENABLED=""
+
+  WHISPER_MODEL=$(get_config_value WHISPER_MODEL)
+  WHISPER_PORT=$(get_config_value WHISPER_PORT)
+  WHISPER_API_KEY=$(get_config_value WHISPER_API_KEY)
+
   WHISPER_MODEL="${WHISPER_MODEL:-base}"
   WHISPER_PORT="${WHISPER_PORT:-9000}"
+
+  if [ -n "$WHISPER_API_KEY" ]; then
+    WHISPER_AUTH_ENABLED=1
+  else
+    WHISPER_AUTH_ENABLED=0
+  fi
+}
+
+do_show_key() {
+  load_config_from_file
+
+  if [ "$WHISPER_AUTH_ENABLED" != 1 ]; then
+    exiterr "API key authentication is disabled for this server."
+  fi
+
+  if [ -z "$WHISPER_API_KEY" ]; then
+    exiterr "API key not found. Authentication may be disabled for this server."
+  fi
+
+  echo
+  echo "==========================================================="
+  echo " Whisper API key"
+  echo "==========================================================="
+  echo "${WHISPER_API_KEY}"
+  echo "==========================================================="
+  echo
+  echo "Use with: -H \"Authorization: Bearer ${WHISPER_API_KEY}\""
+  echo
+}
+
+do_get_key() {
+  load_config_from_file
+
+  if [ "$WHISPER_AUTH_ENABLED" != 1 ] || [ -z "$WHISPER_API_KEY" ]; then
+    exit 1
+  fi
+
+  printf '%s' "$WHISPER_API_KEY"
 }
 
 do_show_info() {
@@ -676,7 +777,14 @@ do_show_info() {
   echo
   echo "Example transcription:"
   echo "  curl http://${server_ip}:${WHISPER_PORT}/v1/audio/transcriptions \\"
+  if [ "$WHISPER_AUTH_ENABLED" = 1 ]; then
+    echo "    -H \"Authorization: Bearer <api-key>\" \\"
+  fi
   echo "    -F file=@audio.mp3 -F model=whisper-1"
+  if [ "$WHISPER_AUTH_ENABLED" = 1 ]; then
+    echo
+    echo "Use '--showkey' to display the API key."
+  fi
   echo
   echo "Service status:"
   echo "  sudo systemctl status whisper"
@@ -798,12 +906,13 @@ select_menu_option() {
   echo
   echo "Select an option:"
   echo "   1) Show server info"
-  echo "   2) List available models"
-  echo "   3) Pre-download a model"
-  echo "   4) Remove Whisper"
-  echo "   5) Exit"
+  echo "   2) Show API key"
+  echo "   3) List available models"
+  echo "   4) Pre-download a model"
+  echo "   5) Remove Whisper"
+  echo "   6) Exit"
   read -rp "Option: " opt
-  until [[ "$opt" =~ ^[1-5]$ ]]; do
+  until [[ "$opt" =~ ^[1-6]$ ]]; do
     echo "$opt: invalid selection."
     read -rp "Option: " opt
   done
@@ -812,9 +921,12 @@ select_menu_option() {
     do_show_info
     ;;
   2)
-    do_list_models
+    do_show_key
     ;;
   3)
+    do_list_models
+    ;;
+  4)
     echo
     read -rp "Model name to download: " model_to_download
     if validate_model_name "$model_to_download"; then
@@ -823,10 +935,10 @@ select_menu_option() {
       exiterr "Unknown model '$model_to_download'. Run '--listmodels' to see valid names."
     fi
     ;;
-  4)
+  5)
     remove_whisper
     ;;
-  5)
+  6)
     exit 0
     ;;
   esac
@@ -838,6 +950,8 @@ select_menu_option() {
 
 auto=0
 show_info=0
+show_key=0
+get_key=0
 list_models=0
 download_model=0
 remove_whisper=0
@@ -864,6 +978,14 @@ fi
 if [ -f "$WHISPER_CONF" ]; then
   if [ "$show_info" = 1 ]; then
     do_show_info
+    exit 0
+  fi
+  if [ "$show_key" = 1 ]; then
+    do_show_key
+    exit 0
+  fi
+  if [ "$get_key" = 1 ]; then
+    do_get_key
     exit 0
   fi
   if [ "$download_model" = 1 ]; then
@@ -894,6 +1016,7 @@ download_api_server
 install_packages
 create_whisper_user
 create_directories
+configure_api_key
 create_venv
 install_api_server
 create_config
