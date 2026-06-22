@@ -48,6 +48,7 @@ _beam_size = 5      # beam size used for transcription
 _word_timestamps = False  # default for word-level timestamps
 _max_upload_bytes = 1024 * 1024 * 1024  # 1 GiB by default; 0 disables the limit
 _UPLOAD_CHUNK_SIZE = 1024 * 1024
+_UNSUPPORTED_DIARIZE_MODEL = "gpt-4o-transcribe-diarize"
 
 # Serialise all inference calls (batch and streaming) so that CTranslate2 is
 # never called concurrently from multiple threads.
@@ -168,6 +169,56 @@ def _verify_api_key(authorization: Optional[str] = Header(default=None)) -> None
         )
     if parts[1] != required:
         raise HTTPException(status_code=401, detail="Invalid API key.")
+
+def _merge_form_lists(*values: Optional[List[str]]) -> Optional[List[str]]:
+    merged = []
+    for value in values:
+        if not value:
+            continue
+        merged.extend(item for item in value if item is not None)
+    return merged or None
+
+def _validate_openai_transcription_compat(
+    model: str,
+    response_format: str,
+    include: Optional[List[str]] = None,
+    chunking_strategy: Optional[str] = None,
+    known_speaker_names: Optional[List[str]] = None,
+    known_speaker_references: Optional[List[str]] = None,
+) -> None:
+    model_id = model.strip().lower()
+    if model_id == _UNSUPPORTED_DIARIZE_MODEL:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Model 'gpt-4o-transcribe-diarize' is not supported by this server."
+            ),
+        )
+    if response_format.strip().lower() == "diarized_json":
+        raise HTTPException(
+            status_code=400,
+            detail="response_format='diarized_json' is not supported by this server.",
+        )
+    if include:
+        raise HTTPException(
+            status_code=400,
+            detail="The include field is not supported; OpenAI-compatible logprobs are not available from faster-whisper.",
+        )
+    if chunking_strategy is not None and chunking_strategy.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="chunking_strategy is not supported by this server.",
+        )
+    if known_speaker_names:
+        raise HTTPException(
+            status_code=400,
+            detail="known_speaker_names is not supported by this server.",
+        )
+    if known_speaker_references:
+        raise HTTPException(
+            status_code=400,
+            detail="known_speaker_references is not supported by this server.",
+        )
 
 # ---------------------------------------------------------------------------
 # Timestamp helpers
@@ -559,14 +610,33 @@ async def transcribe(
             "Default: ['segment']."
         ),
     ),
+    include: Optional[List[str]] = Form(
+        default=None,
+        description="Unsupported OpenAI response inclusions such as logprobs.",
+    ),
+    include_brackets: Optional[List[str]] = Form(default=None, alias="include[]"),
+    chunking_strategy: Optional[str] = Form(
+        default=None,
+        description="Unsupported OpenAI chunking strategy.",
+    ),
+    known_speaker_names: Optional[List[str]] = Form(
+        default=None,
+        description="Unsupported OpenAI diarization speaker-name hints.",
+    ),
+    known_speaker_names_brackets: Optional[List[str]] = Form(default=None, alias="known_speaker_names[]"),
+    known_speaker_references: Optional[List[str]] = Form(
+        default=None,
+        description="Unsupported OpenAI diarization speaker-reference audio.",
+    ),
+    known_speaker_references_brackets: Optional[List[str]] = Form(default=None, alias="known_speaker_references[]"),
     _auth: None = Depends(_verify_api_key),
 ):
     """
     Transcribe an audio file.
 
-    Drop-in replacement for OpenAI's POST /v1/audio/transcriptions endpoint.
-    Accepts the same multipart/form-data parameters and returns the same
-    response shapes.
+    Supports standard Whisper-style OpenAI multipart/form-data parameters.
+    Newer OpenAI-only diarization and logprob fields that this server cannot
+    implement return clear 400 errors instead of being silently ignored.
 
     When stream=true the response is text/event-stream (SSE) using the OpenAI
     streaming transcription protocol.  Each event carries a JSON object:
@@ -577,6 +647,14 @@ async def transcribe(
     Supported audio formats: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg, flac
     (all formats supported by ffmpeg).
     """
+    _validate_openai_transcription_compat(
+        model=model,
+        response_format=response_format,
+        include=_merge_form_lists(include, include_brackets),
+        chunking_strategy=chunking_strategy,
+        known_speaker_names=_merge_form_lists(known_speaker_names, known_speaker_names_brackets),
+        known_speaker_references=_merge_form_lists(known_speaker_references, known_speaker_references_brackets),
+    )
     return await _handle_audio(
         task="transcribe",
         file=file,
@@ -626,9 +704,8 @@ async def translate(
     """
     Translate audio to English text.
 
-    Drop-in replacement for OpenAI's POST /v1/audio/translations endpoint.
-    Accepts the same multipart/form-data parameters and returns the same
-    response shapes. The output is always in English.
+    Compatible with common OpenAI translation request fields. The output is
+    always in English. language and stream are local extensions.
 
     Not supported with English-only (.en) models — use a multilingual model.
 
