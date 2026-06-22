@@ -9,6 +9,8 @@ on:
       - '.github/workflows/shellcheck.yml'
       - '.github/workflows/test_set_1.yml'
       - '.github/workflows/test_set_2.yml'
+      - '.github/workflows/tests/**'
+      - 'api_server.py'
 
 jobs:
   shellcheck:
