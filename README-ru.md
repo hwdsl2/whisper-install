@@ -169,7 +169,9 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
 
 ## Справочник API
 
-API полностью совместим с конечными точками OpenAI для [транскрипции аудио](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create) и [перевода аудио](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Любое приложение, уже обращающееся к `https://api.openai.com/v1/audio/transcriptions`, может переключиться на самостоятельно размещаемый сервер, задав:
+API совместим с конечными точками OpenAI для [транскрипции аудио](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create) и [перевода аудио](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Любое приложение, уже обращающееся к `https://api.openai.com/v1/audio/transcriptions`, может переключиться на самостоятельно размещаемый сервер, задав:
+
+Параметры транскрибирования, специфичные для OpenAI, такие как `gpt-4o-transcribe-diarize`, `response_format=diarized_json`, `include=logprobs`, `chunking_strategy`, `known_speaker_names` и `known_speaker_references`, не поддерживаются и возвращают `400`.
 
 ```
 OPENAI_BASE_URL=http://<ip-сервера>:9000
@@ -190,7 +192,7 @@ Content-Type: multipart/form-data
 | `model` | строка | ✅ | Передайте `whisper-1` (значение принимается, но всегда используется активная модель). |
 | `language` | строка | — | BCP-47 код языка (например, `en`, `fr`, `ru`). Переопределяет `WHISPER_LANGUAGE` для этого запроса. |
 | `prompt` | строка | — | Необязательный текст для управления стилем модели или продолжения предыдущего сегмента. |
-| `response_format` | строка | — | Формат вывода. По умолчанию: `json`. См. [форматы ответа](#форматы-ответа). Игнорируется при `stream=true`. |
+| `response_format` | строка | — | Формат вывода. По умолчанию: `json`. См. [форматы ответа](#форматы-ответа). Игнорируется при `stream=true`. Специфичный для OpenAI `diarized_json` не поддерживается. |
 | `temperature` | число с плавающей точкой | — | Температура выборки (0–1). По умолчанию: `0`. |
 | `stream` | булево значение | — | Включить SSE-стриминг. При значении `true` сегменты возвращаются как события `text/event-stream` по мере декодирования. По умолчанию: `false`. |
 | `timestamp_granularities[]` | массив | — | Гранулярность временны́х меток. Значения: `word`, `segment`. При включении `word` вывод `verbose_json` содержит массив `words` верхнего уровня с временны́ми метками и оценками уверенности для каждого слова. По умолчанию: `["segment"]`. |
@@ -333,7 +335,7 @@ POST /v1/audio/translations
 Content-Type: multipart/form-data
 ```
 
-Переводит аудио на любом языке в английский текст. Прямая замена [конечной точки перевода аудио OpenAI](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Принимает те же параметры, что и конечная точка транскрипции. Вывод всегда на английском языке.
+Переводит аудио на любом языке в английский текст. Совместим с [конечной точкой перевода аудио OpenAI](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Принимает обычные параметры перевода. Вывод всегда на английском языке.
 
 > **Примечание:** Перевод не поддерживается моделями только для английского языка (`.en`). Используйте многоязычную модель, например `base`, `small` или `large-v3-turbo`.
 

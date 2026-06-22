@@ -169,7 +169,9 @@ curl http://<server-ip>:9000/v1/audio/transcriptions \
 
 ## API reference
 
-The API is fully compatible with OpenAI's [audio transcription](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create) and [audio translation](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create) endpoints. Any application already calling `https://api.openai.com/v1/audio/transcriptions` can switch to self-hosted by setting:
+The API is compatible with OpenAI's [audio transcription](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create) and [audio translation](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create) endpoints. Any application already calling `https://api.openai.com/v1/audio/transcriptions` can switch to self-hosted by setting:
+
+OpenAI-only transcription options such as `gpt-4o-transcribe-diarize`, `response_format=diarized_json`, `include=logprobs`, `chunking_strategy`, `known_speaker_names`, and `known_speaker_references` are not supported and return `400`.
 
 ```
 OPENAI_BASE_URL=http://<server-ip>:9000
@@ -190,7 +192,7 @@ Content-Type: multipart/form-data
 | `model` | string | ✅ | Pass `whisper-1` (value is accepted but the active model is always used). |
 | `language` | string | — | BCP-47 language code (e.g. `en`, `fr`, `zh`). Overrides `WHISPER_LANGUAGE` for this request. |
 | `prompt` | string | — | Optional text to guide the model's style or continue a previous segment. |
-| `response_format` | string | — | Output format. Default: `json`. See [response formats](#response-formats). Ignored when `stream=true`. |
+| `response_format` | string | — | Output format. Default: `json`. See [response formats](#response-formats). Ignored when `stream=true`. OpenAI-only `diarized_json` is not supported. |
 | `temperature` | float | — | Sampling temperature (0–1). Default: `0`. |
 | `stream` | boolean | — | Enable SSE streaming. When `true`, segments are returned as `text/event-stream` events as they are decoded. Default: `false`. |
 | `timestamp_granularities[]` | array | — | Timestamp granularities to populate. Values: `word`, `segment`. When `word` is included, `verbose_json` output includes a top-level `words` array with per-word timing and confidence. Default: `["segment"]`. |
@@ -333,7 +335,7 @@ POST /v1/audio/translations
 Content-Type: multipart/form-data
 ```
 
-Translates audio in any language to English text. Drop-in replacement for [OpenAI's audio translation endpoint](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Accepts the same parameters as the transcription endpoint. The output is always in English.
+Translates audio in any language to English text. Compatible with [OpenAI's audio translation endpoint](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Accepts the common translation parameters. The output is always in English.
 
 > **Note:** Translation is not supported with English-only (`.en`) models. Use a multilingual model such as `base`, `small`, or `large-v3-turbo`.
 

@@ -169,7 +169,9 @@ curl http://<服务器IP>:9000/v1/audio/transcriptions \
 
 ## API 参考
 
-该 API 与 OpenAI 的[音频转录](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create)和[音频翻译](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)接口完全兼容。任何已调用 `https://api.openai.com/v1/audio/transcriptions` 的应用程序，只需设置以下内容即可切换到自托管：
+该 API 与 OpenAI 的[音频转录](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create)和[音频翻译](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)接口兼容。任何已调用 `https://api.openai.com/v1/audio/transcriptions` 的应用程序，只需设置以下内容即可切换到自托管：
+
+OpenAI 专用的转录选项（如 `gpt-4o-transcribe-diarize`、`response_format=diarized_json`、`include=logprobs`、`chunking_strategy`、`known_speaker_names` 和 `known_speaker_references`）不受支持，并会返回 `400`。
 
 ```
 OPENAI_BASE_URL=http://<服务器IP>:9000
@@ -190,7 +192,7 @@ Content-Type: multipart/form-data
 | `model` | 字符串 | ✅ | 传入 `whisper-1`（值被接受，但始终使用当前活跃模型）。 |
 | `language` | 字符串 | — | BCP-47 语言代码（例如 `en`、`fr`、`zh`）。覆盖本次请求的 `WHISPER_LANGUAGE` 设置。 |
 | `prompt` | 字符串 | — | 用于引导模型风格或延续前一片段的可选文本。 |
-| `response_format` | 字符串 | — | 输出格式。默认：`json`。参见[响应格式](#响应格式)。当 `stream=true` 时忽略此参数。 |
+| `response_format` | 字符串 | — | 输出格式。默认：`json`。参见[响应格式](#响应格式)。当 `stream=true` 时忽略此参数。不支持 OpenAI 专用的 `diarized_json`。 |
 | `temperature` | 浮点数 | — | 采样温度（0–1）。默认：`0`。 |
 | `stream` | 布尔值 | — | 启用 SSE 流式传输。为 `true` 时，片段以 `text/event-stream` 事件的形式实时返回。默认：`false`。 |
 | `timestamp_granularities[]` | 数组 | — | 要填充的时间戳粒度。值：`word`、`segment`。包含 `word` 时，`verbose_json` 输出的顶层包含带有逐词时间和置信度的 `words` 数组。默认：`["segment"]`。 |
@@ -333,7 +335,7 @@ POST /v1/audio/translations
 Content-Type: multipart/form-data
 ```
 
-将任意语言的音频翻译为英文文本。是 [OpenAI 音频翻译接口](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)的直接替代品。接受与转录接口相同的参数。输出始终为英文。
+将任意语言的音频翻译为英文文本。与 [OpenAI 音频翻译接口](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)兼容。接受常见的翻译参数。输出始终为英文。
 
 > **注意：** 翻译功能不支持仅限英语的（`.en`）模型。请使用多语言模型，如 `base`、`small` 或 `large-v3-turbo`。
 
