@@ -220,6 +220,14 @@ def _validate_openai_transcription_compat(
             detail="known_speaker_references is not supported by this server.",
         )
 
+
+def _validate_temperature(temperature: float) -> None:
+    if not 0 <= temperature <= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="temperature must be between 0 and 1.",
+        )
+
 # ---------------------------------------------------------------------------
 # Timestamp helpers
 # ---------------------------------------------------------------------------
@@ -388,6 +396,8 @@ async def _handle_audio(
     """
     if _model is None:
         raise HTTPException(status_code=503, detail="Model is not loaded yet. Please retry.")
+
+    _validate_temperature(temperature)
 
     # Block translation on English-only models
     if task == "translate" and _model_name and _model_name.endswith(".en"):
