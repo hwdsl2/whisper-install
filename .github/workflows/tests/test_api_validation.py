@@ -113,5 +113,24 @@ class OpenAITranscriptionCompatTests(unittest.TestCase):
         self.assertIsNone(api_server._merge_form_lists(None, []))
 
 
+class TemperatureValidationTests(unittest.TestCase):
+    def test_accepts_temperature_bounds(self):
+        api_server._validate_temperature(0)
+        api_server._validate_temperature(0.5)
+        api_server._validate_temperature(1)
+
+    def test_rejects_temperature_below_zero(self):
+        with self.assertRaises(api_server.HTTPException) as ctx:
+            api_server._validate_temperature(-0.01)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("between 0 and 1", ctx.exception.detail)
+
+    def test_rejects_temperature_above_one(self):
+        with self.assertRaises(api_server.HTTPException) as ctx:
+            api_server._validate_temperature(1.01)
+        self.assertEqual(ctx.exception.status_code, 400)
+        self.assertIn("between 0 and 1", ctx.exception.detail)
+
+
 if __name__ == "__main__":
     unittest.main()

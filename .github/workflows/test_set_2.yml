@@ -106,6 +106,14 @@ jobs:
             -F file=@/tmp/test.wav -F model=whisper-1 -F 'known_speaker_names[]=agent'
           expect_transcription_400 \
             -F file=@/tmp/test.wav -F model=whisper-1 -F 'known_speaker_references[]=data:audio/wav;base64,AAAA'
+          expect_transcription_400 \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F temperature=1.01
+
+          http_code=$(curl -s -o /dev/null -w '%{http_code}' \
+            "${whisper_curl_args[@]}" \
+            http://127.0.0.1:9000/v1/audio/translations \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F temperature=-0.01 2>/dev/null || true)
+          [ "$http_code" = "400" ] || { echo "Expected 400 for invalid translation temperature, got $http_code"; exit 1; }
 
           # Test transcription endpoint (json format)
           curl -sf "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/audio/transcriptions \
