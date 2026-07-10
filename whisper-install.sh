@@ -19,7 +19,7 @@ WHISPER_SVC="/etc/systemd/system/whisper.service"
 WHISPER_TMPDIR="/run/whisper-temp"
 
 WS_API_URL="https://github.com/hwdsl2/ai-stack-extras/releases/download/v1.0.0/whisper_api_server.py"
-WS_API_SHA256="2c8d40be052dae4a051491161db6eb7236edd4185d46ddbccc92764e799f0813"
+WS_API_SHA256="f526f1cc4e2a9f26949181faf040288ddd281cac2d7b77442fe5c1fc856cc3fc"
 
 check_ip() {
   IP_REGEX='^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
@@ -562,8 +562,12 @@ WHISPER_COMPUTE_TYPE=int8
 # Number of CPU threads to use for inference (positive integer).
 WHISPER_THREADS=2
 
-# Beam size for decoding (positive integer, higher = more accurate but slower).
+# Beam size for transcription and translation decoding (positive integer, higher = more accurate but slower).
 WHISPER_BEAM=5
+
+# Maximum beam size allowed for the per-request beam override.
+# Set to 0 to allow any positive request beam value.
+WHISPER_MAX_REQUEST_BEAM=10
 
 # Maximum uploaded audio file size in MB. Requests above this limit return HTTP 413.
 # Set to 0 to disable the upload size limit.
