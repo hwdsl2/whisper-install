@@ -204,6 +204,8 @@ Content-Type: multipart/form-data
 | `stream` | 布林值 | — | 啟用 SSE 串流傳輸。為 `true` 時，片段以 `text/event-stream` 事件的形式即時返回。預設：`false`。 |
 | `timestamp_granularities[]` | 陣列 | — | 要填充的時間戳記粒度。值：`word`、`segment`。包含 `word` 時，`verbose_json` 輸出的頂層包含帶有逐字時間和信心度的 `words` 陣列。預設：`["segment"]`。 |
 
+**本地 faster-whisper 擴充：** 可設定 `beam`，為單一轉錄或翻譯請求覆寫 `WHISPER_BEAM`。這不是 OpenAI API 架構的一部分，因此不要將其傳送到託管的 OpenAI API 或嚴格相容 OpenAI 的閘道。每請求預設上限為 `10`（`WHISPER_MAX_REQUEST_BEAM`）；將該變數設為 `0` 可停用上限。Beam 搜尋主要影響 `temperature=0` 時的確定性解碼。
+
 **範例：**
 
 ```bash
@@ -475,7 +477,8 @@ sudo systemctl restart whisper
 | `WHISPER_DEVICE` | 運算裝置。 | `cpu` |
 | `WHISPER_COMPUTE_TYPE` | 量化類型。建議 CPU 使用 `int8`。 | `int8` |
 | `WHISPER_THREADS` | 推理使用的 CPU 執行緒數。設定為實體核心數可獲得最佳延遲。 | `2` |
-| `WHISPER_BEAM` | 解碼的束搜尋大小。較大的值可能提高準確率，但會降低速度。使用 `1` 可獲得最快的（貪婪）解碼。 | `5` |
+| `WHISPER_BEAM` | 轉錄和翻譯解碼的 beam 大小。較大的值可能提高準確率，但會降低速度。使用 `1` 可獲得最快的（貪婪）解碼。 | `5` |
+| `WHISPER_MAX_REQUEST_BEAM` | 每個請求的 `beam` 覆寫值允許的最大 beam 大小。設為 `0` 可停用此限制。 | `10` |
 | `WHISPER_MAX_UPLOAD_MB` | 上傳音訊檔案的最大大小（MB）。超過此限制的請求會返回 HTTP 413。設為 `0` 可停用此限制。 | `1024` |
 | `WHISPER_API_KEY` | 選用的 Bearer 權杖。全新安裝會自動產生。設定後，所有 API 請求必須包含 `Authorization: Bearer <key>`。明確設為空值可停用身分驗證。 | 全新安裝自動產生 |
 | `WHISPER_LOG_LEVEL` | 日誌級別：`DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`。 | `INFO` |

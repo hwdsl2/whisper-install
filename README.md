@@ -204,6 +204,8 @@ Content-Type: multipart/form-data
 | `stream` | boolean | — | Enable SSE streaming. When `true`, segments are returned as `text/event-stream` events as they are decoded. Default: `false`. |
 | `timestamp_granularities[]` | array | — | Timestamp granularities to populate. Values: `word`, `segment`. When `word` is included, `verbose_json` output includes a top-level `words` array with per-word timing and confidence. Default: `["segment"]`. |
 
+**Local faster-whisper extension:** You can set `beam` to override `WHISPER_BEAM` for a single transcription or translation request. This is not part of the OpenAI API schema, so do not send it to the hosted OpenAI API or strict OpenAI-compatible gateways. The default per-request cap is `10` (`WHISPER_MAX_REQUEST_BEAM`); set that variable to `0` to disable the cap. Beam search mainly affects deterministic decoding when `temperature=0`.
+
 **Example:**
 
 ```bash
@@ -475,7 +477,8 @@ All variables are optional. If not set, defaults are used automatically.
 | `WHISPER_DEVICE` | Compute device. | `cpu` |
 | `WHISPER_COMPUTE_TYPE` | Quantization type. `int8` is recommended for CPU. | `int8` |
 | `WHISPER_THREADS` | CPU threads for inference. Set to the number of physical cores for best latency. | `2` |
-| `WHISPER_BEAM` | Beam size for decoding. Higher values may improve accuracy at the cost of speed. Use `1` for fastest (greedy) decoding. | `5` |
+| `WHISPER_BEAM` | Beam size for transcription and translation decoding. Higher values may improve accuracy at the cost of speed. Use `1` for fastest (greedy) decoding. | `5` |
+| `WHISPER_MAX_REQUEST_BEAM` | Maximum beam size allowed for the per-request `beam` override. Set to `0` to disable this limit. | `10` |
 | `WHISPER_MAX_UPLOAD_MB` | Maximum uploaded audio file size in MB. Requests above this limit return HTTP 413. Set to `0` to disable the limit. | `1024` |
 | `WHISPER_API_KEY` | Optional Bearer token. Fresh installs auto-generate one. If set, all API requests must include `Authorization: Bearer <key>`. Set explicitly empty to disable authentication. | Auto-generated for fresh installs |
 | `WHISPER_LOG_LEVEL` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. | `INFO` |
