@@ -57,6 +57,7 @@ jobs:
           grep -q 'WHISPER_MODEL=base' /etc/whisper/whisper.conf
           grep -q 'WHISPER_PORT=9000' /etc/whisper/whisper.conf
           grep -q 'WHISPER_LISTEN_ADDR=0.0.0.0' /etc/whisper/whisper.conf
+          grep -q 'WHISPER_MAX_REQUEST_BEAM=10' /etc/whisper/whisper.conf
           grep -q '^WHISPER_API_KEY=whisper-' /etc/whisper/whisper.conf
           whisper_key=$(bash whisper.sh --getkey)
           [ -n "$whisper_key" ] || { echo "Generated Whisper API key not found"; exit 1; }

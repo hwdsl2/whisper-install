@@ -50,6 +50,7 @@ jobs:
           sudo grep -q 'WHISPER_MODEL=base' /etc/whisper/whisper.conf
           sudo grep -q 'WHISPER_PORT=9000' /etc/whisper/whisper.conf
           sudo grep -q 'WHISPER_LISTEN_ADDR=0.0.0.0' /etc/whisper/whisper.conf
+          sudo grep -q 'WHISPER_MAX_REQUEST_BEAM=10' /etc/whisper/whisper.conf
           sudo grep -q '^WHISPER_API_KEY=whisper-' /etc/whisper/whisper.conf
           whisper_key=$(sudo bash whisper.sh --getkey)
           [ -n "$whisper_key" ] || { echo "Generated Whisper API key not found"; exit 1; }
@@ -111,6 +112,8 @@ jobs:
             -F file=@/tmp/test.wav -F model=whisper-1 -F 'known_speaker_references[]=data:audio/wav;base64,AAAA'
           expect_transcription_400 \
             -F file=@/tmp/test.wav -F model=whisper-1 -F temperature=1.01
+          expect_transcription_400 \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F beam=11
 
           http_code=$(curl -s -o /dev/null -w '%{http_code}' \
             "${whisper_curl_args[@]}" \
@@ -120,7 +123,7 @@ jobs:
 
           # Test transcription endpoint (json format)
           curl -sf "${whisper_curl_args[@]}" http://127.0.0.1:9000/v1/audio/transcriptions \
-            -F file=@/tmp/test.wav -F model=whisper-1 \
+            -F file=@/tmp/test.wav -F model=whisper-1 -F beam=1 \
             | grep -q '"text"'
 
           # Test transcription endpoint (text format)
