@@ -24,9 +24,9 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 
 **Also available:**
 
+- **New book:** [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) — deploy this service as part of a secure, complete private AI stack
 - AI stack: [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack)
 - Docker-based AI services: [Whisper](https://github.com/hwdsl2/docker-whisper), [Kokoro](https://github.com/hwdsl2/docker-kokoro), [Embeddings](https://github.com/hwdsl2/docker-embeddings), [LiteLLM](https://github.com/hwdsl2/docker-litellm), [Ollama](https://github.com/hwdsl2/docker-ollama), [Docling](https://github.com/hwdsl2/docker-docling), [MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway)
-- Book: [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) — use this service in a complete private AI stack
 
 ## Community
 
