@@ -8,6 +8,8 @@
 
 Этот скрипт устанавливает и настраивает самостоятельно размещаемый сервер [Whisper](https://github.com/openai/whisper) speech-to-text API на базе [faster-whisper](https://github.com/SYSTRAN/faster-whisper), предоставляя совместимые с OpenAI конечные точки `/v1/audio/transcriptions` и `/v1/audio/translations`. Транскрибируйте и переводите аудиофайлы с помощью любого приложения, поддерживающего OpenAI audio API.
 
+> 📘 **Новая книга:** [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) — узнайте, как развернуть этот сервис в составе полного приватного AI-стека с безопасными настройками по умолчанию.
+
 **Возможности:**
 
 - Полностью автоматическая установка сервера Whisper без участия пользователя
@@ -24,7 +26,6 @@
 
 **Также доступно:**
 
-- **Новая книга:** [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) — разверните этот сервис в составе безопасного и полного приватного AI-стека
 - AI-стек: [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-ru.md)
 - AI-сервисы на базе Docker: [Whisper](https://github.com/hwdsl2/docker-whisper/blob/main/README-ru.md), [Kokoro](https://github.com/hwdsl2/docker-kokoro/blob/main/README-ru.md), [Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-ru.md), [LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-ru.md), [Ollama](https://github.com/hwdsl2/docker-ollama/blob/main/README-ru.md), [Docling](https://github.com/hwdsl2/docker-docling/blob/main/README-ru.md), [MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-ru.md)
 

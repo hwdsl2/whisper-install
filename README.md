@@ -8,6 +8,8 @@ Whisper speech-to-text server installer for Ubuntu, Debian, AlmaLinux, Rocky Lin
 
 This script installs and configures a self-hosted [Whisper](https://github.com/openai/whisper) speech-to-text API server powered by [faster-whisper](https://github.com/SYSTRAN/faster-whisper), providing OpenAI-compatible `/v1/audio/transcriptions` and `/v1/audio/translations` endpoints. Transcribe and translate audio files using any app that supports the OpenAI audio API.
 
+> 📘 **New book:** [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) — learn how to deploy this service as part of a complete, secure-by-default private AI stack.
+
 **Features:**
 
 - Fully automated Whisper server setup, no user input needed
@@ -24,7 +26,6 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 
 **Also available:**
 
-- **New book:** [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) — deploy this service as part of a secure, complete private AI stack
 - AI stack: [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack)
 - Docker-based AI services: [Whisper](https://github.com/hwdsl2/docker-whisper), [Kokoro](https://github.com/hwdsl2/docker-kokoro), [Embeddings](https://github.com/hwdsl2/docker-embeddings), [LiteLLM](https://github.com/hwdsl2/docker-litellm), [Ollama](https://github.com/hwdsl2/docker-ollama), [Docling](https://github.com/hwdsl2/docker-docling), [MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway)
 

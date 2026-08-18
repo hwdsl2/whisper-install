@@ -8,6 +8,8 @@
 
 本腳本安裝並設定由 [faster-whisper](https://github.com/SYSTRAN/faster-whisper) 驅動的自託管 [Whisper](https://github.com/openai/whisper) 語音轉文字 API 伺服器，提供相容 OpenAI 的 `/v1/audio/transcriptions` 和 `/v1/audio/translations` 介面。使用任何支援 OpenAI 音訊 API 的應用程式轉錄和翻譯音訊檔案。
 
+> 📘 **新書：**[The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon)——瞭解如何將此服務部署為完整且預設即安全的私有 AI 技術棧的一部分。
+
 **功能特性：**
 
 - 全自動 Whisper 伺服器安裝，無需使用者輸入
@@ -24,7 +26,6 @@
 
 **另提供：**
 
-- **新書：**[The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon)——將此服務部署為安全、完整的私有 AI 技術棧的一部分
 - AI 套件：[Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-zh-Hant.md)
 - 基於 Docker 的 AI 服務：[Whisper](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh-Hant.md)、[Kokoro](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh-Hant.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh-Hant.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh-Hant.md)、[Ollama](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh-Hant.md)、[Docling](https://github.com/hwdsl2/docker-docling/blob/main/README-zh-Hant.md)、[MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-zh-Hant.md)
 
