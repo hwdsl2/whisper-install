@@ -94,8 +94,8 @@ check_os_ver() {
   if [[ "$os" == "ubuntu" && "$os_version" -lt 2204 ]]; then
     exiterr "Ubuntu 22.04 or higher is required to use this installer."
   fi
-  if [[ "$os" == "debian" && "$os_version" -lt 11 ]]; then
-    exiterr "Debian 11 or higher is required to use this installer."
+  if [[ "$os" == "debian" && "$os_version" -lt 12 ]]; then
+    exiterr "Debian 12 or higher is required to use this installer."
   fi
   if [[ "$os" == "centos" && "$os_version" -lt 9 ]]; then
     exiterr "CentOS 9 or higher is required to use this installer."
