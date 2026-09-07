@@ -577,7 +577,7 @@ sudo bash whisper.sh --auto --model base --port 9000
 
 ## Технические детали
 
-- Поддержка ОС: Ubuntu 22.04+, Debian 11+, AlmaLinux/Rocky/CentOS 9+, RHEL 9+, Fedora
+- Поддержка ОС: Ubuntu 22.04+, Debian 12+, AlmaLinux/Rocky/CentOS 9+, RHEL 9+, Fedora
 - Среда выполнения: Python 3.9+ (виртуальное окружение в `/opt/whisper/venv`)
 - STT-движок: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) с CTranslate2 (INT8 по умолчанию)
 - API-фреймворк: [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)

@@ -577,7 +577,7 @@ sudo bash whisper.sh --auto --model base --port 9000
 
 ## 技术细节
 
-- 操作系统支持：Ubuntu 22.04+、Debian 11+、AlmaLinux/Rocky/CentOS 9+、RHEL 9+、Fedora
+- 操作系统支持：Ubuntu 22.04+、Debian 12+、AlmaLinux/Rocky/CentOS 9+、RHEL 9+、Fedora
 - 运行时：Python 3.9+（虚拟环境位于 `/opt/whisper/venv`）
 - STT 引擎：[faster-whisper](https://github.com/SYSTRAN/faster-whisper) with CTranslate2（默认 INT8）
 - API 框架：[FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)

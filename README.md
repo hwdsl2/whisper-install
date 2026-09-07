@@ -577,7 +577,7 @@ All install options are optional when using `--auto`. Defaults: model `base`, po
 
 ## Technical details
 
-- OS support: Ubuntu 22.04+, Debian 11+, AlmaLinux/Rocky/CentOS 9+, RHEL 9+, Fedora
+- OS support: Ubuntu 22.04+, Debian 12+, AlmaLinux/Rocky/CentOS 9+, RHEL 9+, Fedora
 - Runtime: Python 3.9+ (virtual environment at `/opt/whisper/venv`)
 - STT engine: [faster-whisper](https://github.com/SYSTRAN/faster-whisper) with CTranslate2 (INT8 by default)
 - API framework: [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/)
