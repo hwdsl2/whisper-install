@@ -8,8 +8,6 @@
 
 本腳本安裝並設定由 [faster-whisper](https://github.com/SYSTRAN/faster-whisper) 驅動的自託管 [Whisper](https://github.com/openai/whisper) 語音轉文字 API 伺服器，提供相容 OpenAI 的 `/v1/audio/transcriptions` 和 `/v1/audio/translations` 介面。使用任何支援 OpenAI 音訊 API 的應用程式轉錄和翻譯音訊檔案。
 
-> 📘 **新書：**[The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon)——瞭解如何將此服務部署為完整且預設即安全的私有 AI 技術棧的一部分。
-
 **功能特性：**
 
 - 全自動 Whisper 伺服器安裝，無需使用者輸入
@@ -24,27 +22,12 @@
 - 將 Whisper 安裝為具有專用系統使用者的 systemd 服務
 - 模型從 HuggingFace 下載並快取至 `/var/lib/whisper`
 
+> 📘 **新書：**[The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon)。一本關於建置、保護和維運自己的私有 AI 技術棧的實用指南。
+
 **另提供：**
 
 - AI 套件：[Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-zh-Hant.md)
 - 基於 Docker 的 AI 服務：[Whisper](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh-Hant.md)、[Kokoro](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh-Hant.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh-Hant.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh-Hant.md)、[Ollama](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh-Hant.md)、[Docling](https://github.com/hwdsl2/docker-docling/blob/main/README-zh-Hant.md)、[MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-zh-Hant.md)
-
-## 社群
-
-- 📬 [訂閱專案更新](https://selfhostedstack.beehiiv.com/subscribe?utm_campaign=ai-zh-hant)（每月 1–2 封郵件）——獲取免費的 AI 和 VPN 部署指南（PDF，英文）
-- 💬 加入 [r/selfhostedstack](https://www.reddit.com/r/selfhostedstack/) 社群，參與討論與專案展示
-- ⭐ 如果你覺得本專案有用，請為儲存庫加星——這能幫助更多人發現它。
-
-<details>
-<summary>自託管 VPN 與網路專案</summary>
-
-- [Setup IPsec VPN](https://github.com/hwdsl2/setup-ipsec-vpn/blob/master/README-zh-Hant.md)
-- [Docker 上的 IPsec VPN](https://github.com/hwdsl2/docker-ipsec-vpn-server/blob/master/README-zh-Hant.md)
-- [WireGuard](https://github.com/hwdsl2/docker-wireguard/blob/main/README-zh-Hant.md)
-- [OpenVPN](https://github.com/hwdsl2/docker-openvpn/blob/main/README-zh-Hant.md)
-- [Headscale](https://github.com/hwdsl2/docker-headscale/blob/main/README-zh-Hant.md)
-
-</details>
 
 ## 系統需求
 
@@ -175,6 +158,23 @@ curl http://<伺服器IP>:9000/v1/audio/transcriptions \
   -F file=@sample_speech.wav \
   -F model=whisper-1
 ```
+
+## 社群
+
+- 📬 [取得專案更新與免費部署指南](https://selfhostedstack.beehiiv.com/subscribe?utm_campaign=ai-zh-hant)（每月 1–2 封電子郵件；指南為英文 PDF）
+- 💬 加入 [r/selfhostedstack](https://www.reddit.com/r/selfhostedstack/) 社群，參與討論與專案展示
+- ⭐ 如果你覺得本專案有用，請為儲存庫加星——這能幫助更多人發現它。
+
+<details>
+<summary>自託管 VPN 與網路專案</summary>
+
+- [Setup IPsec VPN](https://github.com/hwdsl2/setup-ipsec-vpn/blob/master/README-zh-Hant.md)
+- [Docker 上的 IPsec VPN](https://github.com/hwdsl2/docker-ipsec-vpn-server/blob/master/README-zh-Hant.md)
+- [WireGuard](https://github.com/hwdsl2/docker-wireguard/blob/main/README-zh-Hant.md)
+- [OpenVPN](https://github.com/hwdsl2/docker-openvpn/blob/main/README-zh-Hant.md)
+- [Headscale](https://github.com/hwdsl2/docker-headscale/blob/main/README-zh-Hant.md)
+
+</details>
 
 ## API 參考
 
