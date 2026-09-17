@@ -22,7 +22,7 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 - Installs Whisper as a systemd service with a dedicated system user
 - Models downloaded from HuggingFace and cached in `/var/lib/whisper`
 
-> 📘 **Kindle Countdown Deal: $0.99/£0.99 (US & UK).** [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) is a practical guide to building, securing, and operating your own private AI stack.
+> 📘 [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) is a practical guide to local LLMs, RAG, voice, and secure deployment with Docker. **Ebook: $0.99/£0.99 through Sept. 20** (US/UK).
 
 **Also available:**
 
