@@ -22,7 +22,7 @@
 - 将 Whisper 安装为具有专用系统用户的 systemd 服务
 - 模型从 HuggingFace 下载并缓存至 `/var/lib/whisper`
 
-> 📘 [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) 是一本介绍本地大语言模型、RAG、语音 AI，以及使用 Docker 安全部署 AI 服务的实用指南。**电子书：$0.99/£0.99，优惠截至 9 月 20 日**（仅限美国/英国）。
+> 📘 [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon)：**电子书 $0.99/£0.99，优惠截至 9 月 20 日**（仅限美国/英国）。一本关于构建、保护和运维自己的私有 AI 技术栈的实用指南。
 
 **另提供：**
 
