@@ -36,7 +36,8 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 - At least **700 MB RAM** for the default `base` model (see [model table](#available-models))
 - Internet access for the initial model download (the model is cached locally afterwards). Not required if using `WHISPER_LOCAL_ONLY` with pre-cached models.
 
-**Note:** For internet-facing deployments, using a [reverse proxy](#using-a-reverse-proxy) to add HTTPS is **strongly recommended**. When using a reverse proxy, set `WHISPER_LISTEN_ADDR=127.0.0.1` in `/etc/whisper/whisper.conf` to prevent direct access to the unencrypted port.
+> [!NOTE]
+> For internet-facing deployments, use a [reverse proxy](#using-a-reverse-proxy) to add HTTPS. When using a reverse proxy, set `WHISPER_LISTEN_ADDR=127.0.0.1` in `/etc/whisper/whisper.conf` to prevent direct access to the unencrypted port.
 
 ## Installation
 
