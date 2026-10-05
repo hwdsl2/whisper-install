@@ -108,7 +108,7 @@ check_os_ver() {
 check_systemd() {
   if ! command -v systemctl >/dev/null 2>&1; then
     exiterr "This installer requires systemd.
-To run Whisper in Docker instead, see: https://github.com/hwdsl2/docker-whisper"
+To run ScribeCrate (Whisper STT) in Docker instead, see: https://github.com/hwdsl2/scribecrate"
   fi
 }
 
