@@ -27,7 +27,7 @@
 **另提供：**
 
 - AI 套件：[Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-zh.md)
-- 基于 Docker 的 AI 服务：[Whisper](https://github.com/hwdsl2/docker-whisper/blob/main/README-zh.md)、[Kokoro](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh.md)、[Ollama](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh.md)、[Docling](https://github.com/hwdsl2/docker-docling/blob/main/README-zh.md)、[MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-zh.md)
+- 基于 Docker 的 AI 服务：[ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/README-zh.md)、[Kokoro](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh.md)、[Ollama](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh.md)、[Docling](https://github.com/hwdsl2/docker-docling/blob/main/README-zh.md)、[MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-zh.md)
 
 ## 系统要求
 
@@ -179,13 +179,20 @@ curl http://<服务器IP>:9000/v1/audio/transcriptions \
 
 ## API 参考
 
-该 API 与 OpenAI 的[音频转录](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create)和[音频翻译](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)接口兼容。任何已调用 `https://api.openai.com/v1/audio/transcriptions` 的应用程序，只需设置以下内容即可切换到自托管：
+该 API 与 OpenAI 的[音频转录](https://developers.openai.com/api/reference/resources/audio/subresources/transcriptions/methods/create)和[音频翻译](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)接口兼容。使用 OpenAI SDK 的客户端需配置 API 基础 URL 和自托管服务器的 API 密钥：
 
 OpenAI 专用的转录选项（如 `gpt-4o-transcribe-diarize`、`response_format=diarized_json`、`include=logprobs`、`chunking_strategy`、`known_speaker_names` 和 `known_speaker_references`）不受支持，并会返回 `400`。
 
+安装程序默认启用 API 密钥认证。获取密钥以用于以下示例：
+
+```bash
+API_KEY="$(sudo bash whisper.sh --getkey)"
+
+export OPENAI_BASE_URL="http://<服务器IP>:9000/v1"
+export OPENAI_API_KEY="$API_KEY"
 ```
-OPENAI_BASE_URL=http://<服务器IP>:9000
-```
+
+如果已禁用 API 密钥认证，请省略 curl 示例中的 `Authorization` 请求头。OpenAI SDK 客户端仍要求提供非空密钥；此时请设置 `OPENAI_API_KEY=unused`。
 
 ### 转录音频
 
