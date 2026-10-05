@@ -525,11 +525,13 @@ Install Python 3.9+ and re-run this script."
     "$PYTHON_CMD" -m venv "$WHISPER_VENV"
   ) || exiterr "Failed to create Python virtual environment."
   echo "  Installing Python packages (this may take a few minutes)..."
+  # PyAV 19 removed metadata_errors, which faster-whisper's decoder still uses.
   (
     set -x
     "$WHISPER_VENV/bin/pip" install --quiet --no-cache-dir --upgrade pip
     "$WHISPER_VENV/bin/pip" install --quiet --no-cache-dir \
       faster-whisper \
+      "av>=11,<19" \
       fastapi \
       "uvicorn[standard]" \
       python-multipart
