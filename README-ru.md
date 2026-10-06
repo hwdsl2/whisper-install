@@ -1,6 +1,6 @@
 [English](README.md) | [简体中文](README-zh.md) | [繁體中文](README-zh-Hant.md) | [Русский](README-ru.md)
 
-# Скрипт автоматической установки Whisper Speech-to-Text
+# Установщик API транскрипции Whisper
 
 [![Build Status](https://github.com/hwdsl2/whisper-install/actions/workflows/main.yml/badge.svg)](https://github.com/hwdsl2/whisper-install/actions/workflows/main.yml) &nbsp;[![License: MIT](docs/images/license.svg)](https://opensource.org/licenses/MIT)
 
@@ -10,23 +10,22 @@
 
 **Возможности:**
 
-- Полностью автоматическая установка сервера Whisper без участия пользователя
-- Поддержка интерактивной установки с пользовательскими параметрами
-- Поддержка предварительной загрузки моделей и управления сервером
-- Совместимые с OpenAI конечные точки `POST /v1/audio/transcriptions` и `POST /v1/audio/translations` — переключите любое приложение одной строкой
-- Потоковая транскрипция — получайте сегменты через SSE по мере декодирования, не дожидаясь полного файла
-- Временны́е метки на уровне слов — время начала/конца и оценки уверенности для каждого слова в выводе `verbose_json`
-- Несколько форматов вывода: `json`, `text`, `verbose_json`, `srt`, `vtt`
-- Офлайн/изолированный режим — работа без доступа к интернету с предварительно загруженными моделями (`WHISPER_LOCAL_ONLY`)
-- Аудио остаётся на вашем сервере — данные не передаются третьим сторонам
-- Установка Whisper как службы systemd с выделенным системным пользователем
-- Модели загружаются с HuggingFace и кэшируются в `/var/lib/whisper`
+- **Автоматическая установка:** Полностью автоматическая установка сервера Whisper без участия пользователя
+- **Интерактивная установка:** Поддержка интерактивной установки с пользовательскими параметрами
+- **Совместимый с OpenAI API:** `POST /v1/audio/transcriptions` и `POST /v1/audio/translations` для совместимых OpenAI SDK и приложений.
+- **Конфиденциальная локальная обработка:** Аудио остаётся на вашем сервере — данные не передаются третьим сторонам
+- **Потоковые результаты:** получайте сегменты через SSE по мере декодирования, не дожидаясь полного файла
+- **Временны́е метки слов:** время начала/конца и оценки уверенности для каждого слова в выводе `verbose_json`
+- **Гибкие форматы вывода:** `json`, `text`, `verbose_json`, `srt`, `vtt`
+- **Работа без интернета:** работа без доступа к интернету с предварительно загруженными моделями (`WHISPER_LOCAL_ONLY`)
+- **Служба systemd:** Установка Whisper как службы systemd с выделенным системным пользователем
+
+Для полного развёртывания с Docker см. [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-ru.md), который включает ScribeCrate и другие AI-сервисы.
 
 > 📘 [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon): практическое руководство по созданию, защите и эксплуатации собственного приватного ИИ-стека.
 
 **Также доступно:**
 
-- AI-стек: [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-ru.md)
 - AI-сервисы на базе Docker: [ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/README-ru.md), [Kokoro](https://github.com/hwdsl2/docker-kokoro/blob/main/README-ru.md), [Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-ru.md), [LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-ru.md), [Ollama](https://github.com/hwdsl2/docker-ollama/blob/main/README-ru.md), [Docling](https://github.com/hwdsl2/docker-docling/blob/main/README-ru.md), [MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-ru.md)
 
 ## Требования

@@ -1,6 +1,6 @@
 [English](README.md) | [简体中文](README-zh.md) | [繁體中文](README-zh-Hant.md) | [Русский](README-ru.md)
 
-# Whisper 语音转文字自动安装脚本
+# Whisper 转录 API 安装工具
 
 [![Build Status](https://github.com/hwdsl2/whisper-install/actions/workflows/main.yml/badge.svg)](https://github.com/hwdsl2/whisper-install/actions/workflows/main.yml) &nbsp;[![License: MIT](docs/images/license.svg)](https://opensource.org/licenses/MIT)
 
@@ -10,23 +10,22 @@
 
 **功能特性：**
 
-- 全自动 Whisper 服务器安装，无需用户输入
-- 支持使用自定义选项进行交互式安装
-- 支持预下载模型和管理服务器
-- 兼容 OpenAI 的 `POST /v1/audio/transcriptions` 和 `POST /v1/audio/translations` 接口 —— 一行更改即可切换任意应用
-- 流式转录 —— 通过 SSE 实时接收解码片段，无需等待完整文件
-- 逐词时间戳 —— `verbose_json` 输出中包含每个词的开始/结束时间和置信度分数
-- 多种输出格式：`json`、`text`、`verbose_json`、`srt`、`vtt`
-- 离线/隔离网络模式 —— 使用预缓存模型在无网络环境中运行（`WHISPER_LOCAL_ONLY`）
-- 音频保留在你的服务器上 —— 不向第三方发送数据
-- 将 Whisper 安装为具有专用系统用户的 systemd 服务
-- 模型从 HuggingFace 下载并缓存至 `/var/lib/whisper`
+- **自动安装：** 全自动 Whisper 服务器安装，无需用户输入
+- **交互式安装：** 支持使用自定义选项进行交互式安装
+- **兼容 OpenAI 的 API：** 为兼容的 OpenAI SDK 和应用提供 `POST /v1/audio/transcriptions` 和 `POST /v1/audio/translations` 端点。
+- **私密的本地处理：** 音频保留在你的服务器上 —— 不向第三方发送数据
+- **流式结果：** 通过 SSE 实时接收解码片段，无需等待完整文件
+- **逐词时间戳：** `verbose_json` 输出中包含每个词的开始/结束时间和置信度分数
+- **灵活的输出格式：** `json`、`text`、`verbose_json`、`srt`、`vtt`
+- **离线运行：** 使用预缓存模型在无网络环境中运行（`WHISPER_LOCAL_ONLY`）
+- **Systemd 服务：** 将 Whisper 安装为具有专用系统用户的 systemd 服务
+
+如需使用 Docker 部署完整的 AI 技术栈，请参阅 [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-zh.md)，其中包含 ScribeCrate 和其他 AI 服务。
 
 > 📘 [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) 是一本关于构建、保护和运维自己的私有 AI 技术栈的实用指南。
 
 **另提供：**
 
-- AI 套件：[Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-zh.md)
 - 基于 Docker 的 AI 服务：[ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/README-zh.md)、[Kokoro](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh.md)、[Ollama](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh.md)、[Docling](https://github.com/hwdsl2/docker-docling/blob/main/README-zh.md)、[MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-zh.md)
 
 ## 系统要求

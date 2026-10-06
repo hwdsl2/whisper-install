@@ -1,6 +1,6 @@
 [English](README.md) | [简体中文](README-zh.md) | [繁體中文](README-zh-Hant.md) | [Русский](README-ru.md)
 
-# Whisper 語音轉文字自動安裝腳本
+# Whisper 轉錄 API 安裝工具
 
 [![Build Status](https://github.com/hwdsl2/whisper-install/actions/workflows/main.yml/badge.svg)](https://github.com/hwdsl2/whisper-install/actions/workflows/main.yml) &nbsp;[![License: MIT](docs/images/license.svg)](https://opensource.org/licenses/MIT)
 
@@ -10,23 +10,22 @@
 
 **功能特性：**
 
-- 全自動 Whisper 伺服器安裝，無需使用者輸入
-- 支援使用自訂選項進行互動式安裝
-- 支援預下載模型和管理伺服器
-- 相容 OpenAI 的 `POST /v1/audio/transcriptions` 和 `POST /v1/audio/translations` 介面 —— 一行更改即可切換任意應用程式
-- 串流轉錄 —— 透過 SSE 即時接收解碼片段，無需等待完整檔案
-- 逐字時間戳記 —— `verbose_json` 輸出中包含每個字詞的開始/結束時間和信心分數
-- 多種輸出格式：`json`、`text`、`verbose_json`、`srt`、`vtt`
-- 離線/隔離網路模式 —— 使用預快取模型在無網路環境中執行（`WHISPER_LOCAL_ONLY`）
-- 音訊保留在你的伺服器上 —— 不向第三方傳送資料
-- 將 Whisper 安裝為具有專用系統使用者的 systemd 服務
-- 模型從 HuggingFace 下載並快取至 `/var/lib/whisper`
+- **自動安裝：** 全自動 Whisper 伺服器安裝，無需使用者輸入
+- **互動式安裝：** 支援使用自訂選項進行互動式安裝
+- **相容 OpenAI 的 API：** 為相容的 OpenAI SDK 與應用程式提供 `POST /v1/audio/transcriptions` 和 `POST /v1/audio/translations` 端點。
+- **私密的本地處理：** 音訊保留在你的伺服器上 —— 不向第三方傳送資料
+- **串流結果：** 透過 SSE 即時接收解碼片段，無需等待完整檔案
+- **逐字詞時間戳記：** `verbose_json` 輸出中包含每個字詞的開始/結束時間和信心分數
+- **彈性的輸出格式：** `json`、`text`、`verbose_json`、`srt`、`vtt`
+- **離線執行：** 使用預快取模型在無網路環境中執行（`WHISPER_LOCAL_ONLY`）
+- **Systemd 服務：** 將 Whisper 安裝為具有專用系統使用者的 systemd 服務
+
+如需使用 Docker 部署完整的 AI 技術堆疊，請參閱 [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-zh-Hant.md)，其中包含 ScribeCrate 與其他 AI 服務。
 
 > 📘 [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) 是一本關於建置、保護和維運自己的私有 AI 技術堆疊的實用指南。
 
 **另提供：**
 
-- AI 套件：[Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/README-zh-Hant.md)
 - 基於 Docker 的 AI 服務：[ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/README-zh-Hant.md)、[Kokoro](https://github.com/hwdsl2/docker-kokoro/blob/main/README-zh-Hant.md)、[Embeddings](https://github.com/hwdsl2/docker-embeddings/blob/main/README-zh-Hant.md)、[LiteLLM](https://github.com/hwdsl2/docker-litellm/blob/main/README-zh-Hant.md)、[Ollama](https://github.com/hwdsl2/docker-ollama/blob/main/README-zh-Hant.md)、[Docling](https://github.com/hwdsl2/docker-docling/blob/main/README-zh-Hant.md)、[MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway/blob/main/README-zh-Hant.md)
 
 ## 系統需求

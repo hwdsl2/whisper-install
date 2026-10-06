@@ -1,6 +1,6 @@
 [English](README.md) | [简体中文](README-zh.md) | [繁體中文](README-zh-Hant.md) | [Русский](README-ru.md)
 
-# Whisper Speech-to-Text Auto Setup Script
+# Whisper Transcription API Installer
 
 [![Build Status](https://github.com/hwdsl2/whisper-install/actions/workflows/main.yml/badge.svg)](https://github.com/hwdsl2/whisper-install/actions/workflows/main.yml) &nbsp;[![License: MIT](docs/images/license.svg)](https://opensource.org/licenses/MIT)
 
@@ -10,23 +10,22 @@ This script installs and configures a self-hosted [Whisper](https://github.com/o
 
 **Features:**
 
-- Fully automated Whisper server setup, no user input needed
-- Supports interactive install using custom options
-- Supports pre-downloading models and managing the server
-- OpenAI-compatible `POST /v1/audio/transcriptions` and `POST /v1/audio/translations` endpoints — switch any app with a one-line change
-- Streaming transcription — receive segments via SSE as they are decoded, with no waiting for the full file
-- Word-level timestamps — per-word start/end times and confidence scores in `verbose_json` output
-- Multiple output formats: `json`, `text`, `verbose_json`, `srt`, `vtt`
-- Offline/air-gapped mode — run without internet access using pre-cached models (`WHISPER_LOCAL_ONLY`)
-- Audio stays on your server — no data sent to third parties
-- Installs Whisper as a systemd service with a dedicated system user
-- Models downloaded from HuggingFace and cached in `/var/lib/whisper`
+- **Automated setup:** fully automated Whisper server setup with no user input needed.
+- **Interactive installation:** install with custom options through an interactive menu.
+- **OpenAI-compatible API:** `POST /v1/audio/transcriptions` and `POST /v1/audio/translations` for compatible OpenAI SDKs and apps.
+- **Private, local processing:** audio stays on your server and is not sent to third parties.
+- **Streaming results:** receive segments via SSE as they are decoded, with no waiting for the full file.
+- **Word-level timestamps:** per-word start/end times and confidence scores in `verbose_json` output.
+- **Flexible output:** `json`, `text`, `verbose_json`, `srt`, `vtt`.
+- **Offline operation:** run without internet access using pre-cached models (`WHISPER_LOCAL_ONLY`).
+- **Systemd service:** runs Whisper with a dedicated system user.
+
+For a complete deployment with Docker, see [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack), which includes ScribeCrate and other AI services.
 
 > 📘 [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) is a practical guide to building, securing, and operating your own private AI stack.
 
 **Also available:**
 
-- AI stack: [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack)
 - Docker-based AI services: [ScribeCrate](https://github.com/hwdsl2/scribecrate), [Kokoro](https://github.com/hwdsl2/docker-kokoro), [Embeddings](https://github.com/hwdsl2/docker-embeddings), [LiteLLM](https://github.com/hwdsl2/docker-litellm), [Ollama](https://github.com/hwdsl2/docker-ollama), [Docling](https://github.com/hwdsl2/docker-docling), [MCP Gateway](https://github.com/hwdsl2/docker-mcp-gateway)
 
 ## Requirements
