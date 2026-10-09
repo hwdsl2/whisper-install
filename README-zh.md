@@ -135,10 +135,10 @@ sudo journalctl -u whisper -n 50
 看到"Whisper speech-to-text server is ready"后，转录你的第一个音频文件：
 
 ```bash
-API_KEY=$(sudo bash whisper.sh --getkey)
+whisper_api_key="$(sudo bash whisper.sh --getkey)"
 
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@audio.mp3 -F model=whisper-1
 ```
 
@@ -154,7 +154,7 @@ curl -L -o sample_speech.wav \
     "https://github.com/Azure-Samples/cognitive-services-speech-sdk/raw/master/sampledata/audiofiles/katiesteve.wav"
 
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@sample_speech.wav \
   -F model=whisper-1
 ```
@@ -185,10 +185,10 @@ OpenAI 专用的转录选项（如 `gpt-4o-transcribe-diarize`、`response_forma
 安装程序默认启用 API 密钥认证。获取密钥以用于以下示例：
 
 ```bash
-API_KEY="$(sudo bash whisper.sh --getkey)"
+whisper_api_key="$(sudo bash whisper.sh --getkey)"
 
 export OPENAI_BASE_URL="http://<服务器IP>:9000/v1"
-export OPENAI_API_KEY="$API_KEY"
+export OPENAI_API_KEY="$whisper_api_key"
 ```
 
 如果已禁用 API 密钥认证，请省略 curl 示例中的 `Authorization` 请求头。OpenAI SDK 客户端仍要求提供非空密钥；此时请设置 `OPENAI_API_KEY=unused`。
@@ -218,10 +218,10 @@ Content-Type: multipart/form-data
 **示例：**
 
 ```bash
-API_KEY=$(sudo bash whisper.sh --getkey)
+whisper_api_key="$(sudo bash whisper.sh --getkey)"
 
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@meeting.m4a \
   -F model=whisper-1 \
   -F language=zh
@@ -243,7 +243,7 @@ curl http://<服务器IP>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@long-audio.mp3 \
   -F model=whisper-1 \
   -F stream=true
@@ -306,7 +306,7 @@ while (true) {
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@video.mp4 \
   -F model=whisper-1 \
   -F response_format=srt
@@ -316,7 +316,7 @@ curl http://<服务器IP>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json
@@ -326,7 +326,7 @@ curl http://<服务器IP>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json \
@@ -361,7 +361,7 @@ Content-Type: multipart/form-data
 
 ```bash
 curl http://<服务器IP>:9000/v1/audio/translations \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@french-audio.mp3 \
   -F model=whisper-1
 ```
@@ -376,7 +376,7 @@ GET /v1/models
 
 ```bash
 curl http://<服务器IP>:9000/v1/models \
-  -H "Authorization: Bearer $API_KEY"
+  -H "Authorization: Bearer $whisper_api_key"
 ```
 
 ### 交互式 API 文档

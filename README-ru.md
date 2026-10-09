@@ -135,10 +135,10 @@ sudo journalctl -u whisper -n 50
 После появления сообщения «Whisper speech-to-text server is ready» транскрибируйте первый аудиофайл:
 
 ```bash
-API_KEY=$(sudo bash whisper.sh --getkey)
+whisper_api_key="$(sudo bash whisper.sh --getkey)"
 
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@audio.mp3 -F model=whisper-1
 ```
 
@@ -154,7 +154,7 @@ curl -L -o sample_speech.wav \
     "https://github.com/Azure-Samples/cognitive-services-speech-sdk/raw/master/sampledata/audiofiles/katiesteve.wav"
 
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@sample_speech.wav \
   -F model=whisper-1
 ```
@@ -185,10 +185,10 @@ API совместим с конечными точками OpenAI для [тр�
 Установщик по умолчанию включает аутентификацию по API-ключу. Получите ключ для следующих примеров:
 
 ```bash
-API_KEY="$(sudo bash whisper.sh --getkey)"
+whisper_api_key="$(sudo bash whisper.sh --getkey)"
 
 export OPENAI_BASE_URL="http://<ip-сервера>:9000/v1"
-export OPENAI_API_KEY="$API_KEY"
+export OPENAI_API_KEY="$whisper_api_key"
 ```
 
 Если аутентификация по API-ключу отключена, опустите заголовок `Authorization` в примерах curl. Клиентам OpenAI SDK по-прежнему нужен непустой ключ; в этом случае задайте `OPENAI_API_KEY=unused`.
@@ -218,10 +218,10 @@ Content-Type: multipart/form-data
 **Пример:**
 
 ```bash
-API_KEY=$(sudo bash whisper.sh --getkey)
+whisper_api_key="$(sudo bash whisper.sh --getkey)"
 
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@meeting.m4a \
   -F model=whisper-1 \
   -F language=ru
@@ -243,7 +243,7 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@long-audio.mp3 \
   -F model=whisper-1 \
   -F stream=true
@@ -306,7 +306,7 @@ while (true) {
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@video.mp4 \
   -F model=whisper-1 \
   -F response_format=srt
@@ -316,7 +316,7 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json
@@ -326,7 +326,7 @@ curl http://<ip-сервера>:9000/v1/audio/transcriptions \
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/transcriptions \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@audio.mp3 \
   -F model=whisper-1 \
   -F response_format=verbose_json \
@@ -361,7 +361,7 @@ Content-Type: multipart/form-data
 
 ```bash
 curl http://<ip-сервера>:9000/v1/audio/translations \
-  -H "Authorization: Bearer $API_KEY" \
+  -H "Authorization: Bearer $whisper_api_key" \
   -F file=@french-audio.mp3 \
   -F model=whisper-1
 ```
@@ -376,7 +376,7 @@ GET /v1/models
 
 ```bash
 curl http://<ip-сервера>:9000/v1/models \
-  -H "Authorization: Bearer $API_KEY"
+  -H "Authorization: Bearer $whisper_api_key"
 ```
 
 ### Интерактивная документация API
