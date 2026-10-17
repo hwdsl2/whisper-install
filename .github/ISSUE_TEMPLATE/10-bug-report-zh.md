@@ -8,7 +8,7 @@ assignees: ''
 ---
 **任务列表**
 
-- [ ] 我已阅读[自述文件](https://github.com/hwdsl2/whisper-install/blob/main/README-zh.md)或相关章节
+- [ ] 我已阅读[自述文件](https://github.com/hwdsl2/whisper-install/blob/main/docs/README-zh.md)或相关章节
 - [ ] 我搜索了已有的 [Issues](https://github.com/hwdsl2/whisper-install/issues?q=is%3Aissue)
 - [ ] 这个问题是关于 Whisper 安装脚本/配置/API，而不只是 faster-whisper 本身
 
