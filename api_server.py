@@ -16,6 +16,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import tempfile
 import threading
 import time
@@ -47,6 +48,8 @@ _model_name = None  # name as loaded (e.g. "base")
 _beam_size = 5      # beam size used for transcription
 _max_request_beam = 10  # maximum per-request beam override; 0 disables the cap
 _word_timestamps = False  # default for word-level timestamps
+_condition_on_previous_text = True  # preserve faster-whisper's decoding default
+_no_repeat_ngram_size = 0  # 0 disables repeated token n-gram restrictions
 _max_upload_bytes = 1024 * 1024 * 1024  # 1 GiB by default; 0 disables the limit
 _UPLOAD_CHUNK_SIZE = 1024 * 1024
 _UNSUPPORTED_DIARIZE_MODEL = "gpt-4o-transcribe-diarize"
@@ -89,6 +92,46 @@ def _env_float(name: str, default: float) -> float:
             name, val, default,
         )
         return default
+
+
+def _normalized_env_option(name: str) -> str:
+    """Normalize new decoding options without changing legacy env parsers."""
+    whitespace = " \t\r\n\v\f"
+    value = os.environ.get(name, "").strip(whitespace)
+    if len(value) >= 2 and value[0] in ("'", '"') and value[-1] == value[0]:
+        value = value[1:-1].strip(whitespace)
+    return value
+
+
+def _load_decoding_options() -> None:
+    """Validate once, before loading models, then publish the resolved values."""
+    global _condition_on_previous_text, _no_repeat_ngram_size
+
+    condition = _normalized_env_option("WHISPER_CONDITION_ON_PREVIOUS_TEXT")
+    # Deliberately fold ASCII only, just like the container startup script.
+    condition = condition.translate(str.maketrans(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz",
+    ))
+    if condition not in ("", "true", "false"):
+        raise ValueError("WHISPER_CONDITION_ON_PREVIOUS_TEXT must be true or false.")
+    ngram = _normalized_env_option("WHISPER_NO_REPEAT_NGRAM_SIZE") or "0"
+    # Check syntax and decimal bounds before int(), including very long inputs.
+    if (
+        re.fullmatch(r"0|[1-9][0-9]*", ngram) is None
+        or len(ngram) > 10
+        or (len(ngram) == 10 and ngram > "2147483647")
+    ):
+        raise ValueError(
+            "WHISPER_NO_REPEAT_NGRAM_SIZE must be an integer from 0 to 2147483647 "
+            "without signs or leading zeros."
+        )
+    _condition_on_previous_text = condition != "false"
+    _no_repeat_ngram_size = int(ngram)
+    logger.info(
+        "Decoding options: condition_on_previous_text=%s no_repeat_ngram_size=%d",
+        _condition_on_previous_text, _no_repeat_ngram_size,
+    )
+
 
 def _load_model() -> None:
     """Import and initialise the faster-whisper model from environment config."""
@@ -138,6 +181,7 @@ def _load_model() -> None:
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    _load_decoding_options()
     _load_model()
     yield
 
@@ -336,6 +380,8 @@ async def _stream_sse(
                     initial_prompt=prompt or None,
                     temperature=temperature,
                     beam_size=beam_size,
+                    condition_on_previous_text=_condition_on_previous_text,
+                    no_repeat_ngram_size=_no_repeat_ngram_size,
                     vad_filter=True,
                 )
                 for seg in segs_gen:
@@ -541,6 +587,8 @@ async def _handle_audio(
                 initial_prompt=prompt or None,
                 temperature=temperature,
                 beam_size=request_beam,
+                condition_on_previous_text=_condition_on_previous_text,
+                no_repeat_ngram_size=_no_repeat_ngram_size,
                 word_timestamps=wt_flag,
                 vad_filter=True,
             )

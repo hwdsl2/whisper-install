@@ -19,7 +19,7 @@ WHISPER_SVC="/etc/systemd/system/whisper.service"
 WHISPER_TMPDIR="/run/whisper-temp"
 
 WS_API_URL="https://github.com/hwdsl2/ai-stack-extras/releases/download/v1.0.0/whisper_api_server.py"
-WS_API_SHA256="f526f1cc4e2a9f26949181faf040288ddd281cac2d7b77442fe5c1fc856cc3fc"
+WS_API_SHA256="5370f14ec2b8e84c00aaff74793106fb9f9f50688b8b618ca785c96964faa2b1"
 
 check_ip() {
   IP_REGEX='^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
@@ -587,6 +587,17 @@ WHISPER_BEAM=5
 # Maximum beam size allowed for the per-request beam override.
 # Set to 0 to allow any positive request beam value.
 WHISPER_MAX_REQUEST_BEAM=10
+
+# Decoding repetition controls (optional, with unchanged defaults).
+# true/false (case-insensitive); false may reduce repetition feedback loops
+# but can reduce consistency between windows. Empty uses true.
+WHISPER_CONDITION_ON_PREVIOUS_TEXT=true
+
+# Repeated token n-gram restriction: 0 disables it (default).
+# Canonical decimal 0-2147483647, no signs/leading zeros. Empty uses 0.
+# Optional tuning: false above and 3 here; may suppress legitimate repetition.
+# Invalid nonempty values stop startup. Neither option eliminates all hallucinations.
+WHISPER_NO_REPEAT_NGRAM_SIZE=0
 
 # Maximum uploaded audio file size in MB. Requests above this limit return HTTP 413.
 # Set to 0 to disable the upload size limit.
