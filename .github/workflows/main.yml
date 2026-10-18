@@ -1,6 +1,11 @@
 name: build
 
 on:
+  pull_request:
+    paths:
+      - '**.sh'
+      - '.github/workflows/**'
+      - 'api_server.py'
   push:
     branches: [main]
     paths:

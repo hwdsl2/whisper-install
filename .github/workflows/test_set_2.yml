@@ -6,7 +6,33 @@ permissions:
   contents: read
 
 jobs:
+  unit_compatibility:
+    if: github.repository_owner == 'hwdsl2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        python: ['3.9', '3.12']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit and HTTP compatibility
+        run: |
+          set -euo pipefail
+          export PYTHONDONTWRITEBYTECODE=1
+          python -m unittest discover -s .github/workflows/tests
+          test_venv=$(mktemp -d "$RUNNER_TEMP/whisper-unit.XXXXXX")
+          trap 'rm -rf -- "$test_venv"' EXIT
+          python -m venv "$test_venv"
+          "$test_venv/bin/pip" install --disable-pip-version-check fastapi python-multipart uvicorn httpx
+          "$test_venv/bin/python" .github/workflows/tests/check_api_http.py api_server.py
+
   test_set_2:
+    timeout-minutes: 60
     if: github.repository_owner == 'hwdsl2'
     strategy:
       matrix:
@@ -19,6 +45,22 @@ jobs:
           persist-credentials: false
       - name: Unit tests
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .github/workflows/tests
+      - name: Prepare candidate API fixture
+        run: |
+          set -euo pipefail
+          fixture_dir=$(mktemp -d "$RUNNER_TEMP/whisper-candidate.XXXXXX")
+          echo "WHISPER_FIXTURE=$fixture_dir" >> "$GITHUB_ENV"
+          bash .github/workflows/tests/prepare_fixture.sh "$fixture_dir" http://127.0.0.1:8765
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory "$fixture_dir" >"$fixture_dir/server.log" 2>&1 &
+          echo "$!" > "$fixture_dir/server.pid"
+          for attempt in $(seq 1 30); do
+            if curl --max-time 2 -fsS http://127.0.0.1:8765/api_server.py -o /dev/null; then
+              break
+            fi
+            [ "$attempt" -lt 30 ] || exit 1
+            sleep 1
+          done
+          sudo bash "$fixture_dir/check_bad_checksum.sh" "$fixture_dir"
       - name: Test
         run: |
           set -ex
@@ -26,7 +68,7 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           ls -ld whisper-install.sh
 
-          cp -f whisper-install.sh ./whisper.sh
+          cp -f "$WHISPER_FIXTURE/whisper.sh" ./whisper.sh
 
           wait_for_whisper() {
             local port="$1"
@@ -154,6 +196,8 @@ jobs:
           echo "$stream_output" | grep -q '"transcript.text.done"'
           echo "$stream_output" | grep -q '\[DONE\]'
 
+          sudo bash "$WHISPER_FIXTURE/check_systemd_decoding.sh" "$WHISPER_FIXTURE"
+
           sudo bash whisper.sh --uninstall --yes
 
           sudo test -f /etc/systemd/system/whisper.service && exit 1
@@ -214,3 +258,13 @@ jobs:
           sudo bash whisper.sh --uninstall --yes
 
           exit 0
+      - name: Clear candidate fixture
+        if: always()
+        run: |
+          if [[ -n "${WHISPER_FIXTURE:-}" && "$WHISPER_FIXTURE" == "$RUNNER_TEMP"/whisper-candidate.* ]]; then
+            if [ -f "$WHISPER_FIXTURE/server.pid" ]; then
+              kill "$(cat "$WHISPER_FIXTURE/server.pid")" 2>/dev/null || true
+            fi
+            sudo rm -rf -- "$WHISPER_FIXTURE"
+          fi
+          rm -f ./whisper.sh

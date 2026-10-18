@@ -8,6 +8,7 @@ permissions:
 jobs:
   test_set_1:
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
     if: github.repository_owner == 'hwdsl2'
     strategy:
       matrix:
@@ -19,6 +20,23 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - name: Prepare private candidate fixture
+        run: |
+          set -euo pipefail
+          docker network create whisper-candidate
+          fixture_gateway=$(docker network inspect whisper-candidate --format '{{(index .IPAM.Config 0).Gateway}}')
+          fixture_dir=$(mktemp -d "$RUNNER_TEMP/whisper-candidate.XXXXXX")
+          echo "WHISPER_FIXTURE=$fixture_dir" >> "$GITHUB_ENV"
+          bash .github/workflows/tests/prepare_fixture.sh "$fixture_dir" "http://$fixture_gateway:8765"
+          python3 -m http.server 8765 --bind "$fixture_gateway" --directory "$fixture_dir" >"$fixture_dir/server.log" 2>&1 &
+          echo "$!" > "$fixture_dir/server.pid"
+          for attempt in $(seq 1 30); do
+            if curl --max-time 2 -fsS "http://$fixture_gateway:8765/api_server.py" -o /dev/null; then
+              break
+            fi
+            [ "$attempt" -lt 30 ] || exit 1
+            sleep 1
+          done
       - name: Build
         run: |
           mkdir -p "$GITHUB_WORKSPACE/testing/${OS_VERSION//:}"
@@ -27,6 +45,8 @@ jobs:
           mkdir -p scripts
           ls -ld "$GITHUB_WORKSPACE/whisper-install.sh"
           cp -f "$GITHUB_WORKSPACE"/*.sh scripts/
+          cp -f "$GITHUB_WORKSPACE/api_server.py" scripts/api_server.py
+          cp -R "$WHISPER_FIXTURE" ./fixture
 
           cat > run.sh <<'EOF'
           #!/bin/bash
@@ -44,9 +64,11 @@ jobs:
           if grep -qs -i rocky /etc/redhat-release; then
             yum -y -q update
           fi
-          yum -y -q install wget
+          yum -y -q install wget iproute
 
-          cp -f /opt/src/scripts/whisper-install.sh ./whisper.sh
+          cp -f /opt/src/fixture/whisper.sh ./whisper.sh
+
+          bash /opt/src/fixture/check_bad_checksum.sh /opt/src/fixture
 
           bash whisper.sh --auto
 
@@ -67,6 +89,8 @@ jobs:
           bash whisper.sh --listmodels
           bash whisper.sh --listmodels | grep -q 'base'
           bash whisper.sh --listmodels | grep -q 'large-v3-turbo'
+
+          bash /opt/src/fixture/check_systemd_decoding.sh /opt/src/fixture
 
           bash whisper.sh --uninstall --yes
 
@@ -133,6 +157,7 @@ jobs:
           rm -f /lib/systemd/system/anaconda.target.wants/*;
 
           COPY scripts/ /opt/src/scripts/
+          COPY fixture/ /opt/src/fixture/
           COPY ./run.sh /opt/src/run.sh
           RUN chmod 755 /opt/src/run.sh
 
@@ -147,7 +172,7 @@ jobs:
       - name: Test
         run: |
           docker run -d --name "${OS_VERSION//:}-test-1" -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-            --cgroupns=host --privileged "${OS_VERSION//:}-test"
+            --cgroupns=host --privileged --network whisper-candidate "${OS_VERSION//:}-test"
           sleep 5
           docker exec "${OS_VERSION//:}-test-1" /opt/src/run.sh
 
@@ -157,3 +182,10 @@ jobs:
           rm -rf "$GITHUB_WORKSPACE/testing/${OS_VERSION//:}"
           docker rm -f "${OS_VERSION//:}-test-1" || true
           docker rmi "${OS_VERSION//:}-test" || true
+          docker network rm whisper-candidate || true
+          if [[ -n "${WHISPER_FIXTURE:-}" && "$WHISPER_FIXTURE" == "$RUNNER_TEMP"/whisper-candidate.* ]]; then
+            if [ -f "$WHISPER_FIXTURE/server.pid" ]; then
+              kill "$(cat "$WHISPER_FIXTURE/server.pid")" 2>/dev/null || true
+            fi
+            rm -rf -- "$WHISPER_FIXTURE"
+          fi
