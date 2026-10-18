@@ -449,7 +449,14 @@ download_api_server() {
   actual_sha256=$(sha256sum "$tmp_file" 2>/dev/null | cut -d ' ' -f 1)
   if [ "$actual_sha256" != "$WS_API_SHA256" ]; then
     /bin/rm -f "$tmp_file"
-    exiterr "Whisper API server checksum verification failed. Abort. No changes were made."
+    exiterr "Whisper API server checksum verification failed.
+Installation aborted. No installation changes were made.
+
+Download the latest installer from:
+https://github.com/hwdsl2/whisper-install
+
+If verification still fails with the latest installer, report the issue.
+Do not bypass checksum verification."
   fi
   WS_API_TMP="$tmp_file"
 }
