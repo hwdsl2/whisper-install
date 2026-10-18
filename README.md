@@ -488,11 +488,21 @@ All variables are optional. If not set, defaults are used automatically.
 | `WHISPER_THREADS` | CPU threads for inference. Set to the number of physical cores for best latency. | `2` |
 | `WHISPER_BEAM` | Beam size for transcription and translation decoding. Higher values may improve accuracy at the cost of speed. Use `1` for fastest (greedy) decoding. | `5` |
 | `WHISPER_MAX_REQUEST_BEAM` | Maximum beam size allowed for the per-request `beam` override. Set to `0` to disable this limit. | `10` |
+| `WHISPER_CONDITION_ON_PREVIOUS_TEXT` | Condition decoding windows on previous text. Set `false` to reduce repetition feedback loops; may reduce cross-window consistency. | `true` |
+| `WHISPER_NO_REPEAT_NGRAM_SIZE` | Restrict repeated token n-grams within decoding. `0` disables this restriction; canonical decimal integer `0` through `2147483647`. N-grams are token sequences, not words. | `0` |
 | `WHISPER_MAX_UPLOAD_MB` | Maximum uploaded audio file size in MB. Requests above this limit return HTTP 413. Set to `0` to disable the limit. | `1024` |
 | `WHISPER_API_KEY` | Optional Bearer token. Fresh installs auto-generate one. If set, all API requests must include `Authorization: Bearer <key>`. Set explicitly empty to disable authentication. | Auto-generated for fresh installs |
 | `WHISPER_LOG_LEVEL` | Log level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. | `INFO` |
 | `WHISPER_LOCAL_ONLY` | When set to any non-empty value, disables all HuggingFace model downloads. For offline or air-gapped deployments with pre-cached models. | *(not set)* |
 | `WHISPER_WORD_TIMESTAMPS` | When set to `true`, enables word-level timestamps globally for all requests. The `verbose_json` output will include a top-level `words` array with per-word timing and confidence. Can also be enabled per-request via `timestamp_granularities[]=word`. | *(not set)* |
+
+The repetition controls apply to transcription and translation, both batch and SSE. Optional tuning for repetition-prone audio is `WHISPER_CONDITION_ON_PREVIOUS_TEXT=false` and `WHISPER_NO_REPEAT_NGRAM_SIZE=3`. This can suppress legitimate repetition or reduce cross-window consistency and does not eliminate all hallucinations.
+
+These settings accept surrounding ASCII whitespace and at most one matching pair of outer quotes. Empty values use defaults. Booleans accept ASCII case-insensitive `true`/`false`; integers must use ASCII digits, without signs or leading zeros. Invalid nonempty values stop startup before model loading.
+
+Use `NAME=value` assignments in `/etc/whisper/whisper.conf`, with optional quotes around values. Do not use `export` or shell expressions.
+
+Removing these options restores the decoding defaults.
 
 ## Switching models
 

@@ -488,11 +488,21 @@ sudo systemctl restart whisper
 | `WHISPER_THREADS` | 推理使用的 CPU 线程数。设置为物理核心数可获得最佳延迟。 | `2` |
 | `WHISPER_BEAM` | 转录和翻译解码的 beam 大小。较大的值可能提高准确率，但会降低速度。使用 `1` 可获得最快的（贪婪）解码。 | `5` |
 | `WHISPER_MAX_REQUEST_BEAM` | 每个请求的 `beam` 覆盖值允许的最大 beam 大小。设为 `0` 可禁用此限制。 | `10` |
+| `WHISPER_CONDITION_ON_PREVIOUS_TEXT` | 使用前一窗口的文本作为解码上下文。设为 `false` 可减少重复反馈循环，但可能降低窗口间的一致性。 | `true` |
+| `WHISPER_NO_REPEAT_NGRAM_SIZE` | 限制解码中的重复 token n-gram。`0` 表示禁用；接受 `0` 至 `2147483647` 的规范十进制整数。n-gram 是 token 序列，不一定是单词。 | `0` |
 | `WHISPER_MAX_UPLOAD_MB` | 上传音频文件的最大大小（MB）。超过此限制的请求会返回 HTTP 413。设为 `0` 可禁用此限制。 | `1024` |
 | `WHISPER_API_KEY` | 可选的 Bearer 令牌。全新安装会自动生成。设置后，所有 API 请求必须包含 `Authorization: Bearer <key>`。显式设为空可禁用身份验证。 | 全新安装自动生成 |
 | `WHISPER_LOG_LEVEL` | 日志级别：`DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`。 | `INFO` |
 | `WHISPER_LOCAL_ONLY` | 设置为任意非空值时，禁用所有 HuggingFace 模型下载。适用于使用预缓存模型的离线或隔离网络部署。 | *（未设置）* |
 | `WHISPER_WORD_TIMESTAMPS` | 设置为 `true` 时，为所有请求全局启用逐词时间戳。`verbose_json` 输出将包含带有逐词时间和置信度的顶层 `words` 数组。也可通过 `timestamp_granularities[]=word` 按请求启用。 | *（未设置）* |
+
+重复控制适用于转录和翻译的批处理及 SSE 路径。对于容易重复的音频，可尝试 `WHISPER_CONDITION_ON_PREVIOUS_TEXT=false` 和 `WHISPER_NO_REPEAT_NGRAM_SIZE=3`。这可能抑制正常重复或降低窗口间的一致性，不能消除所有幻觉。
+
+这些设置的值可包含首尾 ASCII 空白，以及最多一对匹配的外层引号。空值使用默认值。布尔值接受 `true`/`false`，不区分 ASCII 字母大小写；整数必须使用 ASCII 数字，且不能包含正负号或前导零。非空无效值会在模型加载前阻止启动。
+
+在 `/etc/whisper/whisper.conf` 中使用 `NAME=value` 格式的赋值语句，值可用引号括起。不要使用 `export` 或 shell 表达式。
+
+移除这两个选项可恢复默认解码设置。
 
 ## 切换模型
 
