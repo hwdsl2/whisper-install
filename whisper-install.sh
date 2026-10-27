@@ -19,7 +19,7 @@ WHISPER_SVC="/etc/systemd/system/whisper.service"
 WHISPER_TMPDIR="/run/whisper-temp"
 
 WS_API_URL="https://github.com/hwdsl2/ai-stack-extras/releases/download/v1.0.0/whisper_api_server.py"
-WS_API_SHA256="5370f14ec2b8e84c00aaff74793106fb9f9f50688b8b618ca785c96964faa2b1"
+WS_API_SHA256="aaecd42081047a05a2efaad60a3e2abfc87d770fa304b8186d9d030dca13b76e"
 
 check_ip() {
   IP_REGEX='^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
@@ -564,6 +564,8 @@ create_config() {
 # Whisper model to use.
 # Options: tiny, tiny.en, base, base.en, small, small.en, medium, medium.en,
 #          large-v1, large-v2, large-v3, large-v3-turbo, turbo
+# For speech-to-English translation, use a multilingual non-turbo model
+# such as base, small, medium, or large-v3; avoid .en and turbo models.
 WHISPER_MODEL=${whisper_model}
 
 # TCP port for the API server (1-65535)
@@ -849,13 +851,16 @@ Available Whisper models:
   large-v1          ~3 GB    ~10 GB         Older large model
   large-v2          ~3 GB    ~10 GB         Very high accuracy
   large-v3          ~3 GB    ~10 GB         Best accuracy (recommended for quality)
-  large-v3-turbo    ~1.6 GB  ~6 GB          Fast + high accuracy (best overall upgrade)
-  turbo             ~1.6 GB  ~6 GB          Alias for large-v3-turbo
+  large-v3-turbo    ~1.6 GB  ~6 GB          Fast + high accuracy; transcription only
+  turbo             ~1.6 GB  ~6 GB          Alias for large-v3-turbo; transcription only
 
 Notes:
   - English-only (.en) variants are slightly faster for English audio.
-  - large-v3-turbo (or: turbo) is recommended over large-v3 for most use
-    cases: comparable accuracy with significantly lower resource usage.
+  - For transcription, large-v3-turbo (or: turbo) is a faster alternative
+    to large-v3 on hardware with sufficient resources.
+  - For speech-to-English translation, use a multilingual non-turbo model
+    such as base, small, medium, or large-v3. English-only (.en) models do
+    not support translation; turbo models are not trained for it.
   - Models are downloaded from HuggingFace on first use and cached in
     /var/lib/whisper.
   - INT8 quantization (default) reduces RAM usage by approximately 50%.
