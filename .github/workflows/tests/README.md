@@ -38,3 +38,16 @@ and output in disposable scratch space; the helper may download the model.
 The helper records resolved inference dependency versions, fixture hashes,
 transcripts and timing. CPU checks do not establish CUDA inference quality, and
 these tests do not prove that any setting eliminates every hallucination.
+
+## Translation model compatibility
+
+`TranslationModelTests` checks that both turbo aliases and English-only models
+return HTTP 400 for batch/SSE translation before upload persistence or stream
+creation. It also checks multilingual translation, turbo transcription, source
+language forwarding, the loaded model versus request label, and unloaded-model
+503 behavior. These tests run in the existing dependency-free suite.
+
+`check_api_http.py` additionally checks real FastAPI routing, authentication,
+JSON HTTP 400 responses before SSE, continued successful requests, cleanup and
+the translation endpoint documentation. Inference remains a deterministic spy;
+these checks do not download models or measure translation quality.
