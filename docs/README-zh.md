@@ -355,7 +355,7 @@ Content-Type: multipart/form-data
 
 将任意语言的音频翻译为英文文本。与 [OpenAI 音频翻译接口](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create)兼容。接受常见的翻译参数。输出始终为英文。
 
-> **注意：** 翻译功能不支持仅限英语的（`.en`）模型。请使用多语言模型，如 `base`、`small` 或 `large-v3-turbo`。
+> **注意：** 若要将语音翻译成英语，请使用 `base`、`small`、`medium` 或 `large-v3` 等非 turbo 多语言模型。仅支持英语的（`.en`）模型不支持此任务，`large-v3-turbo` / `turbo` 也未针对翻译任务训练。 当服务器加载上述不支持翻译的模型时，批处理和流式翻译请求均返回 HTTP 400。请求中的 `model` 字段不会覆盖服务器端的 `WHISPER_MODEL` 配置。
 
 **示例：**
 
@@ -402,10 +402,10 @@ http://<服务器IP>:9000/docs
 | `large-v1` | ~3 GB | ~10 GB | 较旧的大模型 |
 | `large-v2` | ~3 GB | ~10 GB | 非常高的准确率 |
 | `large-v3` | ~3 GB | ~10 GB | 最高准确率 |
-| `large-v3-turbo` | ~1.6 GB | ~6 GB | 速度快 + 高准确率 ⭐ |
-| `turbo` | ~1.6 GB | ~6 GB | `large-v3-turbo` 的别名 |
+| `large-v3-turbo` | ~1.6 GB | ~6 GB | 速度快 + 高准确率 ⭐；仅用于转录 |
+| `turbo` | ~1.6 GB | ~6 GB | `large-v3-turbo` 的别名；仅用于转录 |
 
-> **提示：** `large-v3-turbo` 的准确率接近 `large-v3`，但资源消耗约为其一半。对于大多数部署场景，它是从 `base` 升级的推荐选择。
+> **提示：** 对于转录，在硬件资源充足时，`large-v3-turbo` 是比 `large-v3` 更快的选择。若要将语音翻译成英语，请选择 `base`、`small`、`medium` 或 `large-v3` 等非 turbo 多语言模型。
 
 **说明：**
 - 仅限英语（`.en`）的变体对英语音频略快。

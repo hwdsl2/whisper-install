@@ -355,7 +355,7 @@ Content-Type: multipart/form-data
 
 Translates audio in any language to English text. Compatible with [OpenAI's audio translation endpoint](https://developers.openai.com/api/reference/resources/audio/subresources/translations/methods/create). Accepts the common translation parameters. The output is always in English.
 
-> **Note:** Translation is not supported with English-only (`.en`) models. Use a multilingual model such as `base`, `small`, or `large-v3-turbo`.
+> **Note:** For speech-to-English translation, use a multilingual non-turbo model such as `base`, `small`, `medium`, or `large-v3`. English-only (`.en`) models do not support this task, and `large-v3-turbo` / `turbo` are not trained for translation. Batch and streaming translation requests return HTTP 400 for these loaded models. The request's `model` field does not override server-side `WHISPER_MODEL`.
 
 **Example:**
 
@@ -402,10 +402,10 @@ http://<server-ip>:9000/docs
 | `large-v1` | ~3 GB | ~10 GB | Older large model |
 | `large-v2` | ~3 GB | ~10 GB | Very high accuracy |
 | `large-v3` | ~3 GB | ~10 GB | Best accuracy |
-| `large-v3-turbo` | ~1.6 GB | ~6 GB | Fast + high accuracy ⭐ |
-| `turbo` | ~1.6 GB | ~6 GB | Alias for `large-v3-turbo` |
+| `large-v3-turbo` | ~1.6 GB | ~6 GB | Fast + high accuracy ⭐; transcription only |
+| `turbo` | ~1.6 GB | ~6 GB | Alias for `large-v3-turbo`; transcription only |
 
-> **Tip:** `large-v3-turbo` offers accuracy close to `large-v3` at roughly half the resource cost. It is the recommended upgrade path from `base` for most deployments.
+> **Tip:** For transcription, `large-v3-turbo` is a faster alternative to `large-v3` on hardware with sufficient resources. For speech-to-English translation, choose a multilingual non-turbo model such as `base`, `small`, `medium`, or `large-v3`.
 
 **Notes:**
 - English-only (`.en`) variants are slightly faster for English audio.
