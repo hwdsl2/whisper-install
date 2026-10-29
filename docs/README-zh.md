@@ -24,9 +24,11 @@
 
 > 📘 [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) 是一本关于构建、保护和运维自己的私有 AI 技术栈的实用指南。
 
-**另提供：**
+**基于 Docker 的 AI 服务：**
 
-- 基于 Docker 的 AI 服务：[ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/docs/README-zh.md)、[SpeakCrate](https://github.com/hwdsl2/speakcrate/blob/main/docs/README-zh.md)、[EmbedCrate](https://github.com/hwdsl2/embedcrate/blob/main/docs/README-zh.md)、[GatewayCrate](https://github.com/hwdsl2/gatewaycrate/blob/main/docs/README-zh.md)、[InferCrate](https://github.com/hwdsl2/infercrate/blob/main/docs/README-zh.md)、[ParseCrate](https://github.com/hwdsl2/parsecrate/blob/main/docs/README-zh.md)、[UplinkCrate](https://github.com/hwdsl2/uplinkcrate/blob/main/docs/README-zh.md)
+- **语音：** [ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/docs/README-zh.md)、[SpeakCrate](https://github.com/hwdsl2/speakcrate/blob/main/docs/README-zh.md)
+- **文档与检索：** [ParseCrate](https://github.com/hwdsl2/parsecrate/blob/main/docs/README-zh.md)、[EmbedCrate](https://github.com/hwdsl2/embedcrate/blob/main/docs/README-zh.md)
+- **模型与网关：** [InferCrate](https://github.com/hwdsl2/infercrate/blob/main/docs/README-zh.md)、[GatewayCrate](https://github.com/hwdsl2/gatewaycrate/blob/main/docs/README-zh.md)、[UplinkCrate](https://github.com/hwdsl2/uplinkcrate/blob/main/docs/README-zh.md)
 
 ## 系统要求
 

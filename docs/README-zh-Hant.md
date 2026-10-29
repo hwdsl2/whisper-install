@@ -24,9 +24,11 @@
 
 > 📘 [The Self-Hosted AI Builder’s Guide](https://books2read.com/aiguide?store=amazon) 是一本關於建置、保護和維運自己的私有 AI 技術堆疊的實用指南。
 
-**另提供：**
+**基於 Docker 的 AI 服務：**
 
-- 基於 Docker 的 AI 服務：[ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/docs/README-zh-Hant.md)、[SpeakCrate](https://github.com/hwdsl2/speakcrate/blob/main/docs/README-zh-Hant.md)、[EmbedCrate](https://github.com/hwdsl2/embedcrate/blob/main/docs/README-zh-Hant.md)、[GatewayCrate](https://github.com/hwdsl2/gatewaycrate/blob/main/docs/README-zh-Hant.md)、[InferCrate](https://github.com/hwdsl2/infercrate/blob/main/docs/README-zh-Hant.md)、[ParseCrate](https://github.com/hwdsl2/parsecrate/blob/main/docs/README-zh-Hant.md)、[UplinkCrate](https://github.com/hwdsl2/uplinkcrate/blob/main/docs/README-zh-Hant.md)
+- **語音：** [ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/docs/README-zh-Hant.md)、[SpeakCrate](https://github.com/hwdsl2/speakcrate/blob/main/docs/README-zh-Hant.md)
+- **文件與檢索：** [ParseCrate](https://github.com/hwdsl2/parsecrate/blob/main/docs/README-zh-Hant.md)、[EmbedCrate](https://github.com/hwdsl2/embedcrate/blob/main/docs/README-zh-Hant.md)
+- **模型與閘道：** [InferCrate](https://github.com/hwdsl2/infercrate/blob/main/docs/README-zh-Hant.md)、[GatewayCrate](https://github.com/hwdsl2/gatewaycrate/blob/main/docs/README-zh-Hant.md)、[UplinkCrate](https://github.com/hwdsl2/uplinkcrate/blob/main/docs/README-zh-Hant.md)
 
 ## 系統需求
 
