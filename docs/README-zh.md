@@ -24,12 +24,6 @@
 
 > 📘 **The Self-Hosted AI Builder’s Guide**（[电子书](https://books2read.com/aiguide?store=amazon) · [平装书](https://books2read.com/aiguide?store=amazon-paperback&format=PAPERBACK)）是一本关于构建、保护和运维自己的私有 AI 技术栈的实用指南。
 
-**基于 Docker 的 AI 服务：**
-
-- **语音：** [ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/docs/README-zh.md)、[SpeakCrate](https://github.com/hwdsl2/speakcrate/blob/main/docs/README-zh.md)
-- **文档与检索：** [ParseCrate](https://github.com/hwdsl2/parsecrate/blob/main/docs/README-zh.md)、[EmbedCrate](https://github.com/hwdsl2/embedcrate/blob/main/docs/README-zh.md)
-- **模型与网关：** [InferCrate](https://github.com/hwdsl2/infercrate/blob/main/docs/README-zh.md)、[GatewayCrate](https://github.com/hwdsl2/gatewaycrate/blob/main/docs/README-zh.md)、[UplinkCrate](https://github.com/hwdsl2/uplinkcrate/blob/main/docs/README-zh.md)
-
 ## 系统要求
 
 - 一台 Linux 服务器（云服务器、VPS、独立服务器或家用服务器）
@@ -585,6 +579,12 @@ server {
 Whisper 可作为更广泛的自托管 AI 设置中的语音转文字服务。
 
 如需完整和轻量级 Docker Compose 技术栈、手动 `docker run` 示例，以及结合 SpeakCrate、EmbedCrate、GatewayCrate、InferCrate、ParseCrate 和 UplinkCrate 的语音/RAG/MCP 流水线示例，请参阅 [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/docs/README-zh.md)。
+
+**基于 Docker 的 AI 服务：**
+
+- **语音：** [ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/docs/README-zh.md)、[SpeakCrate](https://github.com/hwdsl2/speakcrate/blob/main/docs/README-zh.md)
+- **文档与检索：** [ParseCrate](https://github.com/hwdsl2/parsecrate/blob/main/docs/README-zh.md)、[EmbedCrate](https://github.com/hwdsl2/embedcrate/blob/main/docs/README-zh.md)
+- **模型与网关：** [InferCrate](https://github.com/hwdsl2/infercrate/blob/main/docs/README-zh.md)、[GatewayCrate](https://github.com/hwdsl2/gatewaycrate/blob/main/docs/README-zh.md)、[UplinkCrate](https://github.com/hwdsl2/uplinkcrate/blob/main/docs/README-zh.md)
 
 ## 使用自定义选项自动安装
 

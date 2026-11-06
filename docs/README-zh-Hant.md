@@ -24,12 +24,6 @@
 
 > 📘 **The Self-Hosted AI Builder’s Guide**（[電子書](https://books2read.com/aiguide?store=amazon) · [平裝書](https://books2read.com/aiguide?store=amazon-paperback&format=PAPERBACK)）是一本關於建置、保護和維運自己的私有 AI 技術堆疊的實用指南。
 
-**基於 Docker 的 AI 服務：**
-
-- **語音：** [ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/docs/README-zh-Hant.md)、[SpeakCrate](https://github.com/hwdsl2/speakcrate/blob/main/docs/README-zh-Hant.md)
-- **文件與檢索：** [ParseCrate](https://github.com/hwdsl2/parsecrate/blob/main/docs/README-zh-Hant.md)、[EmbedCrate](https://github.com/hwdsl2/embedcrate/blob/main/docs/README-zh-Hant.md)
-- **模型與閘道：** [InferCrate](https://github.com/hwdsl2/infercrate/blob/main/docs/README-zh-Hant.md)、[GatewayCrate](https://github.com/hwdsl2/gatewaycrate/blob/main/docs/README-zh-Hant.md)、[UplinkCrate](https://github.com/hwdsl2/uplinkcrate/blob/main/docs/README-zh-Hant.md)
-
 ## 系統需求
 
 - 一台 Linux 伺服器（雲端伺服器、VPS、獨立伺服器或家用伺服器）
@@ -585,6 +579,12 @@ server {
 Whisper 可作為更廣泛的自託管 AI 設定中的語音轉文字服務。
 
 如需完整和輕量級 Docker Compose 技術堆疊、手動 `docker run` 範例，以及結合 SpeakCrate、EmbedCrate、GatewayCrate、InferCrate、ParseCrate 和 UplinkCrate 的語音/RAG/MCP 流水線範例，請參閱 [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/docs/README-zh-Hant.md)。
+
+**基於 Docker 的 AI 服務：**
+
+- **語音：** [ScribeCrate](https://github.com/hwdsl2/scribecrate/blob/main/docs/README-zh-Hant.md)、[SpeakCrate](https://github.com/hwdsl2/speakcrate/blob/main/docs/README-zh-Hant.md)
+- **文件與檢索：** [ParseCrate](https://github.com/hwdsl2/parsecrate/blob/main/docs/README-zh-Hant.md)、[EmbedCrate](https://github.com/hwdsl2/embedcrate/blob/main/docs/README-zh-Hant.md)
+- **模型與閘道：** [InferCrate](https://github.com/hwdsl2/infercrate/blob/main/docs/README-zh-Hant.md)、[GatewayCrate](https://github.com/hwdsl2/gatewaycrate/blob/main/docs/README-zh-Hant.md)、[UplinkCrate](https://github.com/hwdsl2/uplinkcrate/blob/main/docs/README-zh-Hant.md)
 
 ## 使用自訂選項自動安裝
 
