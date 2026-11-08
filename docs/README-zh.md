@@ -22,7 +22,7 @@
 
 如需使用 Docker 部署完整的 AI 技术栈，请参阅 [Self-Hosted AI Stack](https://github.com/hwdsl2/self-hosted-ai-stack/blob/main/docs/README-zh.md)，其中包含 ScribeCrate 和其他 AI 服务。
 
-> 📘 **The Self-Hosted AI Builder’s Guide**（[电子书](https://books2read.com/aiguide?store=amazon) · [平装书](https://books2read.com/aiguide?store=amazon-paperback&format=PAPERBACK)）是一本关于构建、保护和运维自己的私有 AI 技术栈的实用指南。
+> 📘 **The Self-Hosted AI Builder’s Guide**（[Kindle](https://books2read.com/aiguide?store=amazon) · [Google Play](https://books2read.com/aiguide?store=google) · [平装书](https://books2read.com/aiguide?store=amazon-paperback&format=PAPERBACK)）是一本关于构建、保护和运维自己的私有 AI 技术栈的实用指南。
 
 ## 系统要求
 
