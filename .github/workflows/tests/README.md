@@ -1,53 +1,43 @@
-# Decoding regression checks
+# Regression checks
 
-The dependency-free suite retains the API compatibility/beam tests and adds strict
-startup parsing, default preservation, propagation, authentication and SSE cleanup:
+## Running the checks
+
+Run the dependency-free unit suite from the repository root with Python 3.9+:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .github/workflows/tests
 ```
 
-Run each repository's suite in a separate process. Both APIs are independently
-maintained; the native API remains a self-contained file supporting Python 3.9+.
-The native suite intentionally skips the Docker-only shell bridge test.
+The [build workflow](../main.yml) runs on relevant pull requests and pushes to
+`main`. Its [first](../test_set_1.yml) and [second](../test_set_2.yml) test sets
+cover fresh installs on Linux distributions, checksum rejection and systemd
+configuration. Run installer checks only in disposable Linux environments with
+systemd. The second test set also checks unit/HTTP compatibility on Python 3.9
+and 3.12.
 
-`check_api_http.py api_server.py` exercises the real FastAPI stack with a
-deterministic inference spy. It requires isolated test-only `fastapi`,
-`python-multipart`, `uvicorn` and `httpx` dependencies. Do not install them globally.
+## Coverage and helpers
 
-`check_audio_decoding.py` runs real CPU inference with `tiny`, int8, two threads,
-beam 5 and fixed dependencies/model cache. It compares unset/default/opt-in options,
-all short-audio task/transport combinations and a generated long recording. Its
-optional `--baseline` accepts a reviewed old API for same-runtime comparisons.
-Supply `--api`, `--audio`, `--cache` and `--output` paths. Keep the model/cache
-and output in disposable scratch space; the helper may download the model.
+- Unit tests cover API compatibility, decoding and beam controls, startup
+  parsing, authentication, SSE cleanup, translation-model validation and
+  candidate-payload delivery. Docker-only shell bridge tests are skipped.
+- [HTTP checks](check_api_http.py) exercise real FastAPI routing with stubbed
+  inference, including translation errors before SSE starts. Run
+  `python3 .github/workflows/tests/check_api_http.py api_server.py` with isolated
+  test-only `fastapi`, `python-multipart`, `uvicorn` and `httpx` dependencies.
+- [Audio decoding](check_audio_decoding.py) is an additional real CPU inference
+  helper for comparing default and opt-in settings with short and long audio.
+  Supply `--api`, `--audio`, `--cache` and `--output`; optional `--baseline`
+  compares a reviewed older API. Use isolated inference dependencies and
+  disposable caches/output directories. The helper may download models.
 
 ## Public audio fixture
 
-- Source: OpenAI Whisper [tests/jfk.flac](https://github.com/openai/whisper/blob/6e3be77e1a105e59086e3e21ff5f609fd6fa89a5/tests/jfk.flac).
-- Immutable revision: `6e3be77e1a105e59086e3e21ff5f609fd6fa89a5`.
-- SHA-256: `63a4b1e4c1dc655ac70961ffbf518acd249df237e5a0152faae9a4a836949715`.
-- Repository license: [MIT, Copyright (c) 2022 OpenAI](https://github.com/openai/whisper/blob/6e3be77e1a105e59086e3e21ff5f609fd6fa89a5/LICENSE).
-- The recording is public speech, not a user's private audio. No audio binary is
-  committed here. Preserve the upstream attribution/license when redistributing.
-- The long fixture repeats the speech twice, adds 600 seconds of seeded Gaussian
-  noise plus 60 Hz hum at low amplitude, then appends the speech again. It contains
-  legitimate repetition and later speech. VAD can remove the noise; it is not a
-  reproduction of issue #11's private recording.
+The fixture is OpenAI Whisper's [jfk.flac](https://github.com/openai/whisper/blob/6e3be77e1a105e59086e3e21ff5f609fd6fa89a5/tests/jfk.flac), under its [MIT license, Copyright (c) 2022 OpenAI](https://github.com/openai/whisper/blob/6e3be77e1a105e59086e3e21ff5f609fd6fa89a5/LICENSE).
+[Fixture preparation](prepare_fixture.sh) pins the revision and verifies its
+checksum. No audio binary is committed here; preserve upstream attribution and
+the license when redistributing it. The long decoding fixture adds repeated
+speech and synthetic noise rather than reproducing a private recording.
 
-The helper records resolved inference dependency versions, fixture hashes,
-transcripts and timing. CPU checks do not establish CUDA inference quality, and
-these tests do not prove that any setting eliminates every hallucination.
-
-## Translation model compatibility
-
-`TranslationModelTests` checks that both turbo aliases and English-only models
-return HTTP 400 for batch/SSE translation before upload persistence or stream
-creation. It also checks multilingual translation, turbo transcription, source
-language forwarding, the loaded model versus request label, and unloaded-model
-503 behavior. These tests run in the existing dependency-free suite.
-
-`check_api_http.py` additionally checks real FastAPI routing, authentication,
-JSON HTTP 400 responses before SSE, continued successful requests, cleanup and
-the translation endpoint documentation. Inference remains a deterministic spy;
-these checks do not download models or measure translation quality.
+HTTP checks use stubbed inference. Real CPU checks record versions, transcripts
+and timing, but do not establish CUDA quality or guarantee that a setting
+eliminates every hallucination.
