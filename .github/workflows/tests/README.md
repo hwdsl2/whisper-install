@@ -8,8 +8,9 @@ Run the dependency-free unit suite from the repository root with Python 3.9+:
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s .github/workflows/tests
 ```
 
-The [build workflow](../main.yml) runs on relevant pull requests and pushes to
-`main`. Its [first](../test_set_1.yml) and [second](../test_set_2.yml) test sets
+The [build workflow](../main.yml) runs manually on selected branches and
+automatically on relevant pushes to `main`. Its
+[first](../test_set_1.yml) and [second](../test_set_2.yml) test sets
 cover fresh installs on Linux distributions, checksum rejection and systemd
 configuration. Run installer checks only in disposable Linux environments with
 systemd. The second test set also checks unit/HTTP compatibility on Python 3.9
